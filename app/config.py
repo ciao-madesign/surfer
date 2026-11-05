@@ -13,3 +13,7 @@ AUTO_COLLECT = os.environ.get("SURFER_AUTO_COLLECT", "1") == "1"
 TIMEOUT = float(os.environ.get("SURFER_TIMEOUT", "20"))
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+HOST = os.environ.get("SURFER_HOST", "127.0.0.1")
+PORT_NUM = int(os.environ.get("SURFER_PORT", "3200"))
+PASSWORD = os.environ.get("SURFER_PASSWORD") or None   # protezione base per la rete di casa
+RETENTION_DAYS = int(os.environ.get("SURFER_RETENTION_DAYS", "365"))  # eMMC piccola: pulizia vecchi dati

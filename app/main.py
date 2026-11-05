@@ -1,7 +1,7 @@
-import threading, time
+import base64, hmac, threading
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, Request, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from . import analysis, config, db, service
@@ -12,6 +12,7 @@ STATIC = Path(__file__).parent.parent / "static"
 def _loop(stop: threading.Event):
     while not stop.is_set():
         service.collect_all()
+        service.prune(config.RETENTION_DAYS)
         stop.wait(config.INTERVAL_MIN * 60)
 
 @asynccontextmanager
@@ -23,6 +24,19 @@ async def lifespan(app):
     stop.set()
 
 app = FastAPI(title="Surfer — China Trends", lifespan=lifespan)
+
+@app.middleware("http")
+async def basic_auth(request: Request, call_next):
+    if config.PASSWORD:
+        ok = False
+        try:
+            u, _, p = base64.b64decode(request.headers.get("authorization", "")[6:]).decode().partition(":")
+            ok = hmac.compare_digest(p, config.PASSWORD)
+        except Exception:
+            pass
+        if not ok:
+            return Response("Autenticazione richiesta", 401, headers={"WWW-Authenticate": 'Basic realm="Surfer"'})
+    return await call_next(request)
 
 @app.get("/api/topics")
 def topics(hours: int = 24, platform: str | None = None):

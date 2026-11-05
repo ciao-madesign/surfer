@@ -47,3 +47,10 @@ def test_failed_collection_is_reported(monkeypatch):
     assert service.collect("weibo")["ok"] is False
     h = {s["platform"]: s for s in analysis.health()}
     assert "blocked" in h["weibo"]["last_error"]
+
+def test_password_protection(monkeypatch):
+    from app import config
+    monkeypatch.setattr(config, "PASSWORD", "segreto")
+    c = TestClient(app)
+    assert c.get("/api/health").status_code == 401
+    assert c.get("/api/health", auth=("x", "segreto")).status_code == 200

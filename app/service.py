@@ -1,6 +1,6 @@
 """Raccolta, salvataggio e import."""
 import csv, io, json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from .collectors import COLLECTORS
 from .normalize import topic_key
 from . import db
@@ -69,3 +69,10 @@ def parse_upload(filename: str, raw: bytes) -> list[dict]:
         d = json.loads(text)
         return d if isinstance(d, list) else d.get("items", [])
     return list(csv.DictReader(io.StringIO(text)))
+
+def prune(days: int) -> int:
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat(timespec="seconds")
+    with db.conn() as c:
+        n = c.execute("DELETE FROM snapshots WHERE collected_at<?", (cutoff,)).rowcount
+        c.execute("DELETE FROM runs WHERE started_at<?", (cutoff,))
+    return n

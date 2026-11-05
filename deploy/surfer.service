@@ -1,0 +1,27 @@
+# Servizio systemd dedicato e isolato (stesso schema di learning-lab sul Wyse).
+[Unit]
+Description=Surfer - China Trends (raccolta classifiche e analisi locale)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=surfer
+Group=surfer
+WorkingDirectory=__CARTELLA__
+EnvironmentFile=/etc/surfer.env
+ExecStart=__CARTELLA__/.venv/bin/python -m app
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__DATI__
+ReadOnlyPaths=__CARTELLA__
+MemoryMax=256M
+CPUQuota=30%
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
