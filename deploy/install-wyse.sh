@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installazione ISOLATA di Surfer sul Wyse, accanto a home-hub e learning-lab.
+# Installazione ISOLATA di Surfer sul Wyse (ruolo COLLECTOR: solo raccolta + storage + sync), accanto a home-hub e learning-lab.
 # Non tocca Docker, nginx, AdGuard/DNS, WireGuard, iptables, altri utenti, servizi o porte.
 # Uso:  SURFER_HOST=<IP del Wyse> ./deploy/install-wyse.sh   (dopo clone in /opt/surfer)
 # Si ferma a ogni controllo che non passa. Nessuna VPN di sistema: il proxy e' solo per questo processo.
@@ -35,6 +35,7 @@ sudo chown -R $RUN_USER:$RUN_USER "$DATA"; sudo chmod 700 "$DATA"
 if [ -z "${SURFER_PASSWORD:-}" ]; then read -r -s -p "Password di accesso (lunga): " SURFER_PASSWORD; echo; fi
 sudo install -m 600 -o root -g root /dev/null /etc/$SERVICE.env
 sudo tee /etc/$SERVICE.env >/dev/null <<ENV
+SURFER_ROLE=collector
 SURFER_HOST=$HOST
 SURFER_PORT=$PORT
 SURFER_DB=$DATA/surfer.db

@@ -1,6 +1,7 @@
 import os, tempfile, pathlib
 os.environ["SURFER_DB"] = str(pathlib.Path(tempfile.mkdtemp()) / "t.db")
 os.environ["SURFER_AUTO_COLLECT"] = "0"
+os.environ["SURFER_ROLE"] = "analyst"
 from fastapi.testclient import TestClient
 from app import analysis, service
 from app.collectors import COLLECTORS
@@ -33,14 +34,20 @@ def test_trend_needs_three_observations():
     t = [x for x in analysis.topics() if x["key"] == topic_key("话题")][0]
     assert t["direction"] == "rising" and t["reliability"] == "Supported"
 
-def test_cross_platform_and_import_api():
-    c = TestClient(app)
+def test_cross_platform_and_import_api(monkeypatch):
+    import importlib
+    from app import config
+    monkeypatch.setattr(config, "ROLE", "collector")
+    import app.main as m
+    c = TestClient(importlib.reload(m).app)
+    monkeypatch.setattr(config, "ROLE", "analyst")
+    c2 = TestClient(importlib.reload(m).app)
     csv = "platform,topic,rank\nrednote,#咖啡节#,3\ndouyin,咖啡节,5\n"
     r = c.post("/api/import", files={"file": ("x.csv", csv)}, data={"platform": ""})
     assert r.json()["imported"] == 2
-    cross = [x for x in c.get("/api/cross").json() if x["key"] == topic_key("咖啡节")]
+    cross = [x for x in c2.get("/api/cross").json() if x["key"] == topic_key("咖啡节")]
     assert cross and set(cross[0]["platforms"]) == {"rednote", "douyin"}
-    assert c.get("/api/export.csv").status_code == 200
+    assert c2.get("/api/export.csv").status_code == 200
 
 def test_failed_collection_is_reported(monkeypatch):
     monkeypatch.setattr(COLLECTORS["weibo"], "fetch", lambda: (_ for _ in ()).throw(RuntimeError("blocked")))
@@ -54,3 +61,37 @@ def test_password_protection(monkeypatch):
     c = TestClient(app)
     assert c.get("/api/health").status_code == 401
     assert c.get("/api/health", auth=("x", "segreto")).status_code == 200
+
+
+def test_roles_and_sync(tmp_path, monkeypatch):
+    """Il collector espone solo raccolta/sync; la replica dell'analyst è identica e idempotente."""
+    import importlib, sqlite3
+    from app import config, sync, db
+    # collector con DB proprio
+    monkeypatch.setattr(config, "ROLE", "collector")
+    monkeypatch.setattr(config, "DB_PATH", tmp_path / "wyse.db")
+    import app.main as m
+    m = importlib.reload(m)
+    col = TestClient(m.app)
+    assert col.get("/api/topics").status_code == 404 and col.get("/").status_code == 404
+    with db.conn() as c:
+        service.save_items(c, "weibo", [Item("甲", 1), Item("乙", 2)], "auto", "Verified")
+    data = col.get("/api/sync").json()
+    assert len(data["snapshots"]) == 2
+    assert col.get("/api/sync", params={"after_snapshot": 2}).json()["snapshots"] == []
+    # replica analyst: pull via client collegato al collector in-process
+    monkeypatch.setattr(config, "ROLE", "analyst")
+    monkeypatch.setattr(config, "DB_PATH", tmp_path / "pc.db")
+    monkeypatch.setattr(config, "REMOTE", "http://wyse")
+    class Remote:  # il "Wyse" in-process: legge dal proprio DB
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def get(self, path, params=None):
+            old = config.DB_PATH; config.DB_PATH = tmp_path / "wyse.db"
+            try: return col.get(path, params=params)
+            finally: config.DB_PATH = old
+    monkeypatch.setattr(sync, "client", lambda **k: Remote())
+    assert sync.pull() == {"ok": True, "new_snapshots": 2}
+    assert sync.pull() == {"ok": True, "new_snapshots": 0}
+    with db.conn() as c:
+        assert c.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0] == 2

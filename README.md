@@ -4,10 +4,14 @@ Raccoglie ogni ora le classifiche pubbliche di **Weibo, Douyin e Bilibili**, cos
 locale (SQLite) e mostra trend e temi presenti su più piattaforme. **RedNote e WeChat** si aggiungono
 importando CSV/JSON (`platform,topic,rank,heat,url,collected_at`).
 
-## Avvio
+## Due ruoli
+`SURFER_ROLE=collector` (Wyse: solo raccolta e storage, vedi `docs/INSTALLAZIONE-WYSE.md`) e
+`SURFER_ROLE=analyst` (altro PC: replica i dati, dashboard, analisi, AI). Default: collector.
+
+## Avvio (analyst, in locale)
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --port 8000      # poi apri http://localhost:8000
+SURFER_ROLE=analyst SURFER_REMOTE=http://<ip-wyse>:3200 SURFER_REMOTE_PASSWORD=... python -m app   # http://127.0.0.1:3200
 pytest                                # test
 ```
 

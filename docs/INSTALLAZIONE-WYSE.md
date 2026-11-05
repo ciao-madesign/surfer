@@ -1,5 +1,19 @@
 # Installazione su Dell Wyse (accanto a home-hub e learning-lab)
 
+## Ruoli
+- **Wyse = collector**: raccoglie le classifiche ogni ora, salva i dati, li espone per la sincronizzazione.
+  Nessuna analisi, nessuna AI, nessuna dashboard (`SURFER_ROLE=collector`).
+- **Altro PC = analyst**: replica i dati dal Wyse ogni 5 minuti e fa dashboard, analisi, AI locale, suggerimenti.
+
+```bash
+# sul PC di analisi (non sul Wyse)
+pip install -r requirements.txt
+SURFER_ROLE=analyst SURFER_REMOTE=http://192.168.1.8:3200 SURFER_REMOTE_PASSWORD=<password> \
+  python -m app          # dashboard su http://127.0.0.1:3200
+```
+Se il PC è spento il Wyse continua a raccogliere; alla riaccensione la replica si riallinea da sola.
+Import di RedNote/WeChat e «Raccogli ora» passano dal PC ma vengono eseguiti e salvati sul Wyse.
+
 | | home-hub | learning-lab | surfer |
 |---|---|---|---|
 | Porte | 80, 443, 53, 3001, 8096, 2283 | 3100 | **3200** |
