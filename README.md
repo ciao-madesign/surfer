@@ -26,7 +26,7 @@ Apri http://localhost:3000/admin, chiave `dev`.
 
 ## Pubblicarlo (gratis)
 
-1. **Upstash**: crea un database Redis gratuito e copia `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`.
+1. **Upstash**: puoi usare lo stesso database di WizTrail (il piano gratuito ne consente uno): le chiavi di questo progetto iniziano con `trail:`, quelle di WizTrail con `wiztrail:`, quindi non si mescolano. Copia `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN` dal database esistente.
 2. **Vercel**: importa questo repository (progetto separato da WizTrail) e imposta le variabili: `ADMIN_KEY` (una password lunga), `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
 3. Apri `https://<tuo-progetto>.vercel.app/admin`, entra con `ADMIN_KEY`.
 

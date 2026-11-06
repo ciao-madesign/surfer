@@ -1,9 +1,20 @@
 // Archivio chiave/valore con comandi Redis. In produzione: Upstash Redis (REST, piano gratuito).
 // Senza credenziali (sviluppo e test): implementazione in memoria con scadenze.
 
+// Tutte le chiavi hanno un prefisso (default "trail:"): il database può essere condiviso con altri
+// progetti (es. WizTrail usa "wiztrail:") senza collisioni. Il prefisso si cambia con REDIS_PREFIX.
 export function createStore(env = process.env, clock = Date.now) {
-  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) return upstash(env);
-  return memory(clock);
+  const base = env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN ? upstash(env) : memory(clock);
+  return withPrefix(base, env.REDIS_PREFIX ?? 'trail:');
+}
+
+export function withPrefix(store, prefix) {
+  const px = (c) => [c[0], prefix + c[1], ...c.slice(2)];   // ogni comando usato ha la chiave in posizione 1
+  return {
+    kind: store.kind,
+    cmd: (c) => store.cmd(px(c)),
+    pipeline: (cmds) => store.pipeline(cmds.map(px)),
+  };
 }
 
 function upstash(env) {

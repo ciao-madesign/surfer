@@ -213,3 +213,16 @@ test('eliminazione gara', async () => {
   assert.equal((await api('GET', '/api/live', null, {}, { t: r.view })).status, 401);
   assert.equal(await store.cmd(['EXISTS', `race:${r.id}`]), 0);
 });
+
+test('prefisso chiavi: il database può essere condiviso con altri progetti', async () => {
+  const { withPrefix } = await import('../server/store.js');
+  const seen = [];
+  const fake = { kind: 'fake', cmd: async (c) => { seen.push(c); return 'OK'; }, pipeline: async (cs) => { seen.push(...cs); return cs.map(() => 'OK'); } };
+  const s = withPrefix(fake, 'trail:');
+  await s.cmd(['SET', 'race:1', 'x', 'EX', 60]);
+  await s.pipeline([['HSET', 'last:1', 'p1', '{}'], ['EXPIRE', 'last:1', 5]]);
+  assert.deepEqual(seen, [['SET', 'trail:race:1', 'x', 'EX', 60], ['HSET', 'trail:last:1', 'p1', '{}'], ['EXPIRE', 'trail:last:1', 5]]);
+  // per default createStore usa "trail:", diverso da "wiztrail:"
+  const { createStore: cs } = await import('../server/store.js');
+  const m = cs({}); await m.cmd(['SET', 'a', '1']); assert.equal(await m.cmd(['GET', 'a']), '1');
+});
