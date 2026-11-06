@@ -42,7 +42,7 @@ Apri http://localhost:3000/admin, chiave `dev`.
 ## Come i corridori inviano la posizione (senza Xcode)
 
 1. **Tracker web** (`/track`): apri la pagina in Safari, incolla il codice di collegamento, avvia. Funziona finché lo **schermo resta acceso** e la pagina è aperta; blocco schermo o altra app in primo piano fermano il GPS (limite di iOS, non aggirabile da una pagina web). Il portale mostra allora «Connessione assente» con l'età dell'ultimo dato.
-2. **App Overland** (App Store, gratuita): invia la posizione anche con lo schermo spento. In `/admin`, dopo «Aggiungi» o «Nuovo codice», compare l'indirizzo da inserire in Overland come *Receiver Endpoint*. La frequenza di invio la decide Overland: da verificare in prova.
+2. **App Overland** (App Store, gratuita): invia la posizione anche con lo schermo spento. In `/admin`, dopo «Aggiungi» o «Nuovo codice», compaiono l'indirizzo (*Receiver Endpoint*) e il token (*Access Token*) da inserire in Overland, in due campi separati. La frequenza di invio la decide Overland: da verificare in prova.
 3. **App Swift** (`ios/`): solo se un giorno si avrà un Mac con Xcode.
 
 ## App iPhone nativa (facoltativa)

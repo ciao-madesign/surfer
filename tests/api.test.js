@@ -259,8 +259,10 @@ test('Overland: lotti GeoJSON accettati (token in indirizzo o intestazione)', as
   assert.deepEqual(ok.json, { result: 'ok' });
   const ok2 = await api('POST', '/api/device/overland', { locations: [f(clock.now(), 1.4)] }, { authorization: `Bearer ${r.dev}` });
   assert.equal(ok2.status, 200);
+  const raw = await api('POST', '/api/device/overland', { locations: [f(clock.now() + 1000, 1.5)] }, { Authorization: r.dev });  // token senza "Bearer"
+  assert.equal(raw.status, 200);
   const live = await api('GET', '/api/live', null, {}, { t: r.view });
-  assert.ok(Math.abs(live.json.participants[0].distKm - 1.4) < 0.05);
+  assert.ok(Math.abs(live.json.participants[0].distKm - 1.5) < 0.05);
   assert.equal((await api('POST', '/api/device/overland', body, {}, { token: 'sbagliato' })).status, 401);
   assert.equal((await api('POST', '/api/device/overland', body)).status, 401);
 });
