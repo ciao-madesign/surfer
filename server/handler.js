@@ -278,6 +278,24 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     await store.pipeline(ops);
     return { ok: true, accepted: rows.length, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
   }
+  // App "Overland" (iOS, App Store, gratuita): invia lotti GeoJSON a un indirizzo. Il token del dispositivo
+  // può stare nell'indirizzo (?token=) o nell'intestazione Authorization. Risposta attesa: {"result":"ok"}.
+  async function overland(headers, query, body) {
+    const dev = query.token || bearer(headers);
+    if (!dev) throw new HttpError(401, 'Credenziale dispositivo mancante');
+    const t = now();
+    const fin = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+    const pts = (Array.isArray(body?.locations) ? body.locations : [])
+      .filter((f) => f?.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates))
+      .map((f) => ({ t: Date.parse(f.properties?.timestamp), lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0],
+        ele: fin(f.properties?.altitude), acc: fin(f.properties?.horizontal_accuracy) >= 0 ? f.properties.horizontal_accuracy : null }))
+      .filter((p) => isFinite(p.t) && p.t > t - DAY * 1000 && p.t < t + 120000 && fin(p.lat) != null && fin(p.lon) != null
+        && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && (p.ele == null || (p.ele > -500 && p.ele < 9000)));
+    const auth = { authorization: `Bearer ${dev}` };
+    if (!pts.length) await ingest(auth, { points: [], status: 'tracking' });
+    for (let i = 0; i < pts.length; i += 100) await ingest(auth, { points: pts.slice(i, i + 100), status: 'tracking' });
+    return { result: 'ok' };
+  }
   const toObj = (flat) => { const o = {}; for (let i = 0; i < (flat || []).length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
 
   // ---------- rotte osservatore ----------
@@ -338,6 +356,7 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));
+      if (route === 'device/overland' && method === 'POST') return ok(await overland(h, query, body));
       if (method === 'GET' && route === 'live') return ok(await live(query, h), cache(5, 10));
       if (method === 'GET' && route === 'course') return ok(await courseRoute(query, h), cache(60, 120));
       if (method === 'GET' && route === 'stats') return ok(await stats(query, h), cache(15, 30));

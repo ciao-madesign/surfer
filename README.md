@@ -12,7 +12,9 @@ Riusa asset di [WizTrail](https://github.com/ciao-madesign/WizTrail) (design sys
 | Archivio | Upstash Redis (gratuito) | Le posizioni scadono da sole: nessun cron. In locale: memoria |
 | Portale osservatori | `public/live.html`, `public/js/live.js` | HTML+JS puro, MapLibre self-hosted |
 | Pagina organizzatore | `public/admin.html` | Crea gare, partecipanti, link |
-| App iPhone | `ios/TrailTrack/` | Swift/SwiftUI, installazione da Xcode |
+| Tracker web per il corridore | `public/track.html` | Safari, senza app né Xcode. Limite iOS: serve lo schermo acceso |
+| Compatibilità app Overland | `/api/device/overland` | Tracking a schermo spento con app gratuita dell'App Store, senza Xcode |
+| App iPhone (facoltativa) | `ios/TrailTrack/` | Swift/SwiftUI, richiede Xcode: non necessaria |
 
 Scelte di semplicità: nessun framework né bundler (come WizTrail e Simule); Redis al posto di Neon (le scadenze a 24 ore sono native e non serve un cron, che su Vercel Hobby gira al massimo una volta al giorno); risposte `live` in cache di 5 secondi sulla CDN, così il numero di osservatori non aumenta le letture sul database.
 
@@ -37,7 +39,13 @@ Apri http://localhost:3000/admin, chiave `dev`.
 3. «Genera link» e invia il link ai familiari. «Avvia gara» alla partenza, «Termina gara» all'arrivo.
 4. Il link si può revocare o rigenerare in qualsiasi momento. Dopo «Termina gara» i dati vengono cancellati in 24 ore.
 
-## App iPhone
+## Come i corridori inviano la posizione (senza Xcode)
+
+1. **Tracker web** (`/track`): apri la pagina in Safari, incolla il codice di collegamento, avvia. Funziona finché lo **schermo resta acceso** e la pagina è aperta; blocco schermo o altra app in primo piano fermano il GPS (limite di iOS, non aggirabile da una pagina web). Il portale mostra allora «Connessione assente» con l'età dell'ultimo dato.
+2. **App Overland** (App Store, gratuita): invia la posizione anche con lo schermo spento. In `/admin`, dopo «Aggiungi» o «Nuovo codice», compare l'indirizzo da inserire in Overland come *Receiver Endpoint*. La frequenza di invio la decide Overland: da verificare in prova.
+3. **App Swift** (`ios/`): solo se un giorno si avrà un Mac con Xcode.
+
+## App iPhone nativa (facoltativa)
 
 Vedi [`ios/README.md`](ios/README.md).
 

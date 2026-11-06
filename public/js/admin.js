@@ -70,7 +70,11 @@ function render(extra = {}) {
   const act = (label, fn, cls = '') => el('button', { class: cls, onclick: run(async () => { await fn(); await open(r.id); await loadRaces(); }) }, label);
   const pairs = extra.pairing ? el('div', { class: 'card' }, el('b', {}, `Codice di collegamento di ${extra.pairing.name}`),
     el('div', { class: 'small muted' }, 'Mostrato una sola volta: incollalo nell\'app sul telefono del corridore.'),
-    el('div', { class: 'secret' }, extra.pairing.code), el('button', { onclick: () => copy(extra.pairing.code) }, 'Copia')) : '';
+    el('div', { class: 'secret' }, extra.pairing.code), el('button', { onclick: () => copy(extra.pairing.code) }, 'Copia'),
+    el('div', { class: 'small muted', style: 'margin-top:8px' }, `Sul telefono apri ${location.origin}/track e incolla il codice.`),
+    extra.pairing.overland ? el('details', { class: 'small', style: 'margin-top:6px' }, el('summary', {}, 'Alternativa: app Overland (tracking affidabile a schermo spento)'),
+      el('div', { class: 'muted' }, 'In Overland imposta «Receiver Endpoint» con questo indirizzo (contiene la credenziale, non condividerlo):'),
+      el('div', { class: 'secret' }, extra.pairing.overland), el('button', { onclick: () => copy(extra.pairing.overland) }, 'Copia indirizzo')) : '') : '';
   const link = extra.link ? el('div', { class: 'card' }, el('b', {}, 'Link privato per gli osservatori'),
     el('div', { class: 'small muted' }, 'Chiunque lo abbia può vedere la gara. Mostrato una sola volta.'),
     el('div', { class: 'secret' }, extra.link), el('button', { onclick: () => copy(extra.link) }, 'Copia')) : '';
@@ -89,7 +93,7 @@ function render(extra = {}) {
         el('button', { onclick: run(async () => {
           if (!confirm(`Generare un nuovo codice per ${p.name}? Il vecchio smette di funzionare.`)) return;
           const j = await api('POST', `races/${r.id}/participants/${p.id}/token`, {});
-          render({ pairing: { name: p.name, code: j.pairing } });
+          render({ pairing: { name: p.name, code: j.pairing, overland: `${location.origin}/api/device/overland?token=${j.deviceToken}` } });
         }) }, 'Nuovo codice'),
         act('Rimuovi', () => api('DELETE', `races/${r.id}/participants/${p.id}`)))),
       r.participants.length < 5 && r.status !== 'ended' ? el('div', { class: 'row', style: 'margin-top:8px' },
@@ -97,6 +101,6 @@ function render(extra = {}) {
         el('input', { id: 'pcolor', type: 'color', value: ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa'][r.participants.length], style: 'width:56px;padding:2px' }),
         el('button', { class: 'primary', onclick: run(async () => {
           const name = $('pname').value; const j = await api('POST', `races/${r.id}/participants`, { name, color: $('pcolor').value });
-          await open(r.id); render({ pairing: { name: j.participant.name, code: j.pairing } });
+          await open(r.id); render({ pairing: { name: j.participant.name, code: j.pairing, overland: `${location.origin}/api/device/overland?token=${j.deviceToken}` } });
         }) }, 'Aggiungi')) : ''));
 }

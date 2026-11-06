@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0a0f14">
+<title>Trail Live · Corridore</title><link rel="icon" href="/logo-mark.svg">
+<link rel="stylesheet" href="/css/fonts.css"><link rel="stylesheet" href="/css/colors_and_type.css"><link rel="stylesheet" href="/css/app.css">
+<style>
+main{max-width:520px;margin:0 auto;padding:16px;padding-top:max(16px,env(safe-area-inset-top))}
+textarea{width:100%;background:var(--wt-panel);color:inherit;border:1px solid var(--wt-border);border-radius:8px;padding:8px;font:12px var(--wt-font-mono)}
+.big{width:100%;min-height:56px;font-size:1.1rem}
+.warn{background:var(--wt-warn);color:#1a1300;border-radius:10px;padding:10px 12px;margin:10px 0}
+.state{font-size:1.2rem;font-weight:600}.ok{color:var(--wt-ok)}.bad{color:var(--wt-warn)}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:8px 0}dd{margin:0;text-align:right;font-family:var(--wt-font-mono)}dt{color:var(--wt-muted)}
+body.sharing{background:#050709}
+</style></head>
+<body><main>
+<h1>Corridore</h1>
+<section id="pair"><p class="muted">Incolla il codice di collegamento che ti ha dato l'organizzatore.</p>
+<textarea id="code" rows="3" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+<div class="row" style="margin-top:8px"><button class="primary" id="link">Collega</button></div></section>
+
+<section id="run" hidden>
+  <div class="card"><b id="who"></b> <button id="unlink" class="small" style="float:right;min-height:32px">Scollega</button>
+    <div class="state" id="state">Condivisione ferma</div></div>
+  <div class="warn" id="hint">Per funzionare, <b>lo schermo deve restare acceso</b> e questa pagina aperta in Safari: se blocchi il telefono o apri un'altra app, la condivisione si ferma e riprende quando torni qui.</div>
+  <button class="primary big" id="toggle">Avvia condivisione</button>
+  <dl><dt>Ultimo punto</dt><dd id="last">–</dd><dt>Precisione GPS</dt><dd id="acc">–</dd><dt>Punti in coda</dt><dd id="queue">0</dd>
+      <dt>Ultimo invio</dt><dd id="sent">–</dd><dt>Rete</dt><dd id="net">–</dd></dl>
+  <div class="small bad" id="err"></div>
+  <p class="small muted">Consiglio: attiva «Non disturbare», abbassa la luminosità al minimo e tieni il telefono in tasca con lo schermo acceso. Disattiva la modalità risparmio energetico.</p>
+</section>
+<script type="module" src="/js/track.js"></script></main></body></html>

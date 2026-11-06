@@ -242,3 +242,25 @@ test('codice dispositivo smarrito: il nuovo sostituisce il vecchio, i dati resta
   assert.equal((await api('POST', `/api/admin/races/${r.id}/participants/zzz/token`, {}, ADMIN)).status, 404);
   assert.equal((await api('POST', `/api/admin/races/${r.id}/participants/${r.pid}/token`, {})).status, 401);
 });
+
+test('Overland: lotti GeoJSON accettati (token in indirizzo o intestazione)', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const iso = (ms) => new Date(ms).toISOString();
+  const f = (ms, km, p = {}) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [8, at(km)[0]] },
+    properties: { timestamp: iso(ms), altitude: 1100, horizontal_accuracy: 6, speed: 2, ...p } });
+  const body = { locations: [f(clock.now() - 20000, 1), f(clock.now() - 10000, 1.1),
+    { type: 'Feature', properties: { type: 'trip' } },                       // elementi non-posizione: ignorati
+    f(clock.now() - 5000, 1.2, { horizontal_accuracy: -1 }),                  // precisione non valida -> nulla
+    f(clock.now() + 99999999, 1.3)] };                                        // dal futuro: scartato
+  const ok = await api('POST', '/api/device/overland', body, {}, { token: r.dev });
+  assert.equal(ok.status, 200);
+  assert.deepEqual(ok.json, { result: 'ok' });
+  const ok2 = await api('POST', '/api/device/overland', { locations: [f(clock.now(), 1.4)] }, { authorization: `Bearer ${r.dev}` });
+  assert.equal(ok2.status, 200);
+  const live = await api('GET', '/api/live', null, {}, { t: r.view });
+  assert.ok(Math.abs(live.json.participants[0].distKm - 1.4) < 0.05);
+  assert.equal((await api('POST', '/api/device/overland', body, {}, { token: 'sbagliato' })).status, 401);
+  assert.equal((await api('POST', '/api/device/overland', body)).status, 401);
+});
