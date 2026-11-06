@@ -63,7 +63,20 @@ async function loadRaces() {
   $('races').replaceChildren(...(races.length ? races.map((r) => el('div', { class: 'row', style: 'margin:4px 0' },
     el('button', { onclick: run(() => open(r.id)) }, r.name), el('span', { class: 'tag' }, r.status))) : ['Nessuna gara attiva.']));
 }
-async function open(id) { current = (await api('GET', `races/${id}`)).race; render(); }
+function ago(ms, now) { const s = Math.max(0, Math.round((now - ms) / 1000)); return s < 90 ? `${s} s fa` : s < 5400 ? `${Math.round(s / 60)} min fa` : `${Math.round(s / 3600)} h fa`; }
+function rxText(p, now) {
+  const x = p.received;
+  if (!x) return 'nessun dato ricevuto';
+  const far = x.offCourseM != null && x.offCourseM > 1000 ? ` · a ${(x.offCourseM / 1000).toFixed(x.offCourseM > 10000 ? 0 : 1)} km dal percorso` : '';
+  return `ultimo invio ${ago(x.rcv, now)}${x.t != null ? ` · ultimo punto ${ago(x.t, now)}` : ''}${x.points != null ? ` · ${x.points} punti` : ''}${far}`;
+}
+async function open(id) { const j = await api('GET', `races/${id}`); current = j.race; current.serverTime = j.serverTime; render(); }
+// aggiorna ogni 8 s solo le scritte di ricezione, senza ridisegnare la pagina
+setInterval(async () => {
+  if (!current || document.hidden || $('app').hidden) return;
+  try { const j = await api('GET', `races/${current.id}`);
+    for (const p of j.race.participants) { const n = document.getElementById(`rx-${p.id}`); if (n) n.textContent = rxText(p, j.serverTime); } } catch { /* ignora */ }
+}, 8000);
 
 function render(extra = {}) {
   const r = current, d = $('detail');
@@ -92,6 +105,7 @@ function render(extra = {}) {
     link, pairs,
     el('div', { class: 'card' }, el('b', {}, 'Partecipanti'),
       ...r.participants.map((p) => el('div', { class: 'row', style: 'margin:6px 0' }, el('span', { class: 'dot', style: `background:${p.color}` }), p.name,
+        el('span', { class: 'small muted', id: `rx-${p.id}` }, rxText(p, current.serverTime)),
         el('button', { onclick: run(async () => {
           if (!confirm(`Generare un nuovo codice per ${p.name}? Il vecchio smette di funzionare.`)) return;
           const j = await api('POST', `races/${r.id}/participants/${p.id}/token`, {});

@@ -136,7 +136,16 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     const m = await loadRace(parts[1]);
     const sub = parts[2];
     if (!sub) {
-      if (method === 'GET') return { race: pubMeta(m) };
+      if (method === 'GET') {
+        const last = toObj(await store.cmd(['HGETALL', k.last(m.id)]));
+        const race = pubMeta(m);
+        race.participants = race.participants.map((p) => {
+          const l = last[p.id] ? JSON.parse(last[p.id]) : null;
+          return { ...p, received: l ? { rcv: l.rcv, t: l.t, status: l.status, points: l.n ?? null, offCourseM: l.off ?? null,
+            lat: l.lat ?? null, lon: l.lon ?? null } : null };
+        });
+        return { race, serverTime: now() };
+      }
       if (method === 'DELETE') {
         await store.pipeline([...allKeys(m).map((key) => ['DEL', key]), ['SREM', 'races', m.id]]);
         return { ok: true };
@@ -219,9 +228,9 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
   // ---------- ricezione posizioni (app iOS) ----------
   async function ingest(headers, body) {
     const dev = bearer(headers);
-    if (!dev) throw new HttpError(401, 'Credenziale dispositivo mancante');
+    if (!dev) { console.log(JSON.stringify({ ev: 'ingest-denied', why: 'no-token' })); throw new HttpError(401, 'Credenziale dispositivo mancante'); }
     const ref = await getJSON(store, k.dev(sha256(dev)));
-    if (!ref) throw new HttpError(401, 'Dispositivo non autorizzato');
+    if (!ref) { console.log(JSON.stringify({ ev: 'ingest-denied', why: 'unknown-token' })); throw new HttpError(401, 'Dispositivo non autorizzato'); }
     const minute = Math.floor(now() / 60000);
     const [count] = await store.pipeline([['INCR', `rl:${ref.pid}:${minute}`], ['EXPIRE', `rl:${ref.pid}:${minute}`, 90]]);
     if (count > RATE_PER_MIN) throw new HttpError(429, 'Troppe richieste');
@@ -252,9 +261,9 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     }
 
     const rows = [], writes = [];
-    let km = last?.km ?? 0, fin = !!last?.fin, lastPt = last;
+    let km = last?.km ?? 0, fin = !!last?.fin, lastPt = last, off = last?.off ?? null;
     for (const p of fresh) {
-      if (course) { const pr = project(course, p.lat, p.lon, km); km = Math.max(km, pr.km); }
+      if (course) { const pr = project(course, p.lat, p.lon, km); km = Math.max(km, pr.km); off = Math.round(pr.offM); }
       rows.push(encodePoint(p, km));
       lastPt = { t: p.t, lat: p.lat, lon: p.lon, ele: p.ele, acc: p.acc, km };
       if (course && km >= course.totalKm - 0.05) fin = true;
@@ -271,11 +280,12 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
         }
       }
     }
-    const rec = { ...(lastPt || { t: null }), status, rcv: t, fin };
+    const rec = { ...(lastPt || { t: null }), status, rcv: t, fin, off, n: (last?.n ?? 0) + rows.length };
     const ops = [['HSET', k.last(m.id), ref.pid, JSON.stringify(rec)], ['EXPIRE', k.last(m.id), SAFETY_TTL], ...writes];
     if (rows.length) ops.push(['RPUSH', k.pos(m.id, ref.pid), ...rows], ['LTRIM', k.pos(m.id, ref.pid), -MAX_HISTORY, -1],
       ['EXPIRE', k.pos(m.id, ref.pid), SAFETY_TTL]);
     await store.pipeline(ops);
+    console.log(JSON.stringify({ ev: 'ingest', race: m.id, p: ref.pid, got: pts.length, new: rows.length, st: status }));
     return { ok: true, accepted: rows.length, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
   }
   // App "Overland" (iOS, App Store, gratuita): invia lotti GeoJSON a un indirizzo. Il token del dispositivo
@@ -310,6 +320,7 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
         const st = participantStatus(m, l);
         return { id: p.id, name: p.name, color: p.color, status: st, statusLabel: STATUS_LABEL[st],
           last: l?.t != null ? { t: l.t, lat: l.lat, lon: l.lon, ele: l.ele, ageSec: Math.round((t - l.t) / 1000) } : null,
+          offCourseM: l?.t != null && course ? l.off ?? null : null,
           distKm: l?.t != null && course ? Math.round(l.km * 100) / 100 : null,
           remainingKm: l?.t != null && course ? Math.round(Math.max(0, course.totalKm - l.km) * 100) / 100 : null };
       }), serverTime: t };

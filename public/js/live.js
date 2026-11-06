@@ -77,6 +77,13 @@ function set3d(on) {
 }
 $('b3d').onclick = () => state.ready && set3d(!state.is3d);
 $('bfit').onclick = () => state.ready && fit();
+$('brun').onclick = () => {      // inquadra tutti i corridori (anche se lontani dal percorso)
+  const pts = (state.live?.participants ?? []).filter((p) => p.last);
+  if (!state.ready || !pts.length) return;
+  const b = new maplibregl.LngLatBounds();
+  pts.forEach((p) => b.extend([p.last.lon, p.last.lat]));
+  state.map.fitBounds(b, { padding: 60, maxZoom: 15, duration: 600 });
+};
 $('bbase').onclick = () => {
   if (!state.ready) return;
   state.base = state.base === 'sat' ? 'topo' : 'sat';
@@ -132,7 +139,9 @@ function runnerCard(p, extra) {
     el('div', {}, el('span', { class: 'dot', style: `background:${p.color}` }), el('span', { class: 'name' }, p.name),
       ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
     el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `${fmtAge(p.last.ageSec)} · ${fmtTime(p.last.t)}` : 'nessun dato'),
-    p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');
+    p.offCourseM != null && p.offCourseM > 1000
+      ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km`)
+      : p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');
   if (st) {
     card.append(el('div', { class: 'stats', style: 'grid-column:1/3' },
       kpi('Quota', `${st.ele} m`), kpi('D+ / D−', `${st.gain} / ${st.loss} m`),

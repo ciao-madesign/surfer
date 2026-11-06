@@ -266,3 +266,19 @@ test('Overland: lotti GeoJSON accettati (token in indirizzo o intestazione)', as
   assert.equal((await api('POST', '/api/device/overland', body, {}, { token: 'sbagliato' })).status, 401);
   assert.equal((await api('POST', '/api/device/overland', body)).status, 401);
 });
+
+test('diagnostica: l\'organizzatore vede l\'ultimo invio ricevuto e la distanza dal percorso', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  const before = (await api('GET', `/api/admin/races/${r.id}`, null, ADMIN)).json.race.participants[0];
+  assert.equal(before.received, null);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  await send(api, r.dev, [{ t: clock.now(), lat: 47.5, lon: 9, ele: 300, acc: 10 }]);   // ~150+ km dal percorso
+  const j = (await api('GET', `/api/admin/races/${r.id}`, null, ADMIN)).json;
+  const x = j.race.participants[0].received;
+  assert.equal(x.points, 1);
+  assert.ok(x.offCourseM > 100000);
+  assert.ok(j.serverTime >= x.rcv);
+  const live = (await api('GET', '/api/live', null, {}, { t: r.view })).json.participants[0];
+  assert.ok(live.offCourseM > 100000 && live.last.lat === 47.5);
+});
