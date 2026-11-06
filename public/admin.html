@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Trail Live · Organizzatore</title>
+<link rel="icon" href="/logo-mark.svg">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/colors_and_type.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>main{max-width:720px;margin:0 auto;padding:16px}h1{font-size:1.4rem}h2{font-size:1.05rem;margin:0 0 6px}
+.secret{word-break:break-all;background:var(--wt-panel);padding:8px;border-radius:8px;font-family:var(--wt-font-mono);font-size:12px}
+#msg{position:sticky;top:0;padding:8px 12px;border-radius:8px;display:none;margin-bottom:8px}
+#msg.err{display:block;background:var(--wt-error);color:#1a0000}#msg.ok{display:block;background:var(--wt-ok);color:#001a08}</style>
+</head>
+<body><main>
+<h1>Organizzatore</h1>
+<div id="msg"></div>
+<section class="card" id="login"><h2>Accesso</h2><label for="key">Chiave amministratore</label>
+  <input id="key" type="password" autocomplete="current-password"><div class="row" style="margin-top:8px"><button class="primary" id="enter">Entra</button></div></section>
+<div id="app" hidden>
+  <section class="card"><h2>Nuova gara</h2>
+    <label for="name">Nome della gara</label><input id="name" maxlength="80">
+    <label for="gpx">Traccia GPX</label><input id="gpx" type="file" accept=".gpx,application/gpx+xml">
+    <div class="small muted" id="gpxinfo"></div>
+    <label for="cps">Checkpoint (uno per riga: «Nome @ km», es. «Ristoro Rifugio @ 12.5»)</label>
+    <textarea id="cps" rows="3" style="width:100%;background:var(--wt-panel);color:inherit;border:1px solid var(--wt-border);border-radius:8px;padding:8px"></textarea>
+    <div class="row" style="margin-top:8px"><button class="primary" id="create">Crea gara</button></div></section>
+  <section class="card"><h2>Gare</h2><div id="races" class="small muted">Caricamento…</div></section>
+  <section id="detail"></section>
+</div>
+<script type="module" src="/js/admin.js"></script>
+</main></body></html>

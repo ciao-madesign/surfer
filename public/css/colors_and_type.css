@@ -1,0 +1,199 @@
+/* ═══════════════════════════════════════════════════════════════
+   WizTrail — Colors & Type Foundations
+   Outdoor-inspired, calm, trustworthy. Teal on deep ink.
+   ═══════════════════════════════════════════════════════════════ */
+
+
+:root {
+  /* ── Core palette (dark, default) ───────────────────────── */
+  --wt-bg:      #0a0f14;   /* page bg — near-black navy */
+  --wt-panel:   #0f151c;   /* elevated input surface */
+  --wt-card:    #121a22;   /* card surface */
+  --wt-ink:     #e8f2ff;   /* primary text */
+  --wt-muted:   #a8b3c2;   /* secondary text / captions */
+  --wt-faint:   #5a6b7f;   /* dim text, placeholders */
+  --wt-border:  #2a394d;   /* dividers, input borders */
+
+  /* ── Brand accent — teal ────────────────────────────────── */
+  --wt-teal:      #4fd1c5;   /* primary accent */
+  --wt-teal-200:  #81e6d9;   /* hover / highlight */
+  --wt-teal-700:  #2a9d8f;   /* pressed / deeper */
+  --wt-teal-deep: #002b2b;   /* on-teal text, dark anchor */
+  --wt-teal-tint: color-mix(in oklab, var(--wt-teal) 8%, transparent);
+
+  /* ── Semantic ───────────────────────────────────────────── */
+  --wt-warn:   #ffb020;
+  --wt-error:  #ff6b6b;
+  --wt-ok:     #34A853;
+
+  /* ── WDI difficulty scale (data palette) ────────────────── */
+  --wdi-sport:    #2BB7DA;
+  --wdi-pro:      #34A853;
+  --wdi-advanced: #F4C20D;
+  --wdi-extreme:  #F79617;
+  --wdi-elite:    #E91E63;
+  --wdi-legend:   #8E24AA;
+
+  /* ── Type ───────────────────────────────────────────────── */
+  --wt-font-sans: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --wt-font-mono: 'DM Mono', 'SF Mono', 'Cascadia Code', ui-monospace, monospace;
+
+  /* Type scale — display (light Outfit 300 for titles) */
+  --wt-size-display: clamp(2.4rem, 6vw, 4.2rem);
+  --wt-size-h1:      clamp(1.6rem, 4vw, 2.4rem);
+  --wt-size-h2:      clamp(1.2rem, 3vw, 1.6rem);
+  --wt-size-h3:      0.95rem;
+  --wt-size-body:    1rem;
+  --wt-size-small:   0.82rem;
+  --wt-size-micro:   0.72rem;     /* eyebrows, labels */
+  --wt-size-kpi:     2.8rem;      /* numbers */
+
+  --wt-lh-tight: 1.15;
+  --wt-lh-body:  1.55;
+
+  /* Letter-spacing for ALL CAPS eyebrows */
+  --wt-track-eyebrow: 0.18em;     /* 2.5–3px @ 0.72rem */
+  --wt-track-label:   0.05em;
+
+  /* ── Spacing (4-based) ──────────────────────────────────── */
+  --wt-s1:  4px;
+  --wt-s2:  8px;
+  --wt-s3:  12px;
+  --wt-s4:  16px;
+  --wt-s5:  24px;
+  --wt-s6:  32px;
+  --wt-s7:  48px;
+  --wt-s8:  64px;
+  --wt-s9:  96px;
+
+  /* ── Radii ──────────────────────────────────────────────── */
+  --wt-r-xs:  4px;   /* pills / tags */
+  --wt-r-sm:  6px;
+  --wt-r-md:  10px;  /* inputs / buttons */
+  --wt-r-lg:  12px;  /* kpi / panels */
+  --wt-r-xl:  16px;  /* page wrap / modals */
+
+  /* ── Shadows & elevation ────────────────────────────────── */
+  --wt-shadow-card:  0 8px 28px rgba(0,0,0,.18), 0 1px 0 rgba(255,255,255,.04) inset;
+  --wt-shadow-hover: 0 10px 24px rgba(0,0,0,.25);
+  --wt-shadow-pop:   0 6px 16px rgba(0,0,0,.15);
+
+  /* ── Motion ─────────────────────────────────────────────── */
+  --wt-dur-fast: 150ms;
+  --wt-dur-base: 250ms;
+  --wt-dur-slow: 350ms;
+  --wt-ease-out:    cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --wt-ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+
+  /* ── Backdrop blur levels ───────────────────────────────── */
+  --wt-blur-sm:  blur(6px) saturate(120%);
+  --wt-blur-md:  blur(12px) saturate(130%);
+  --wt-blur-lg:  blur(16px) saturate(130%);
+}
+
+/* ── Light theme (optional, preserved from source) ───────── */
+[data-theme="light"] {
+  --wt-bg:      #ffffff;
+  --wt-panel:   #ffffff;
+  --wt-card:    #f7f9fc;
+  --wt-ink:     #0a0f14;
+  --wt-muted:   #5a6b7f;
+  --wt-faint:   #8a99ab;
+  --wt-border:  #d0d8e3;
+  --wt-teal:    #0ea5e9;      /* brighter cyan on light */
+  --wt-teal-deep: #062827;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Semantic type — drop-in element styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.wt-body {
+  font-family: var(--wt-font-sans);
+  font-size:   var(--wt-size-body);
+  line-height: var(--wt-lh-body);
+  color: var(--wt-ink);
+}
+
+/* Display — used on landing hero. Light weight is the brand signature. */
+.wt-display {
+  font-family: var(--wt-font-sans);
+  font-weight: 400;            /* Outfit regular; italics used for emphasis */
+  font-size:   var(--wt-size-display);
+  line-height: var(--wt-lh-tight);
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+.wt-display em {
+  font-style: italic;
+  color: var(--wt-teal);
+}
+
+.wt-h1 {
+  font-family: var(--wt-font-sans);
+  font-weight: 300;            /* titles are LIGHT — brand signature */
+  font-size:   var(--wt-size-h1);
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  color: var(--wt-ink);
+}
+.wt-h2 {
+  font-family: var(--wt-font-sans);
+  font-weight: 300;
+  font-size:   var(--wt-size-h2);
+  line-height: 1.3;
+  letter-spacing: -0.2px;
+  color: var(--wt-ink);
+}
+.wt-h3 {
+  font-family: var(--wt-font-sans);
+  font-weight: 600;            /* section headers use semibold */
+  font-size:   var(--wt-size-h3);
+  color: var(--wt-ink);
+}
+
+/* Eyebrow — small uppercase teal tag above titles */
+.wt-eyebrow {
+  font-family: var(--wt-font-sans);
+  font-size:   var(--wt-size-micro);
+  font-weight: 700;
+  letter-spacing: var(--wt-track-eyebrow);
+  text-transform: uppercase;
+  color: var(--wt-teal);
+}
+
+.wt-muted  { color: var(--wt-muted); }
+.wt-faint  { color: var(--wt-faint); }
+.wt-mini   { font-size: var(--wt-size-small); color: var(--wt-muted); }
+
+/* KPI numbers — hero values on dashboards */
+.wt-kpi-val {
+  font-family: var(--wt-font-sans);
+  font-weight: 900;
+  font-size:   var(--wt-size-kpi);
+  line-height: 1;
+  color: var(--wt-ink);
+  font-variant-numeric: tabular-nums;
+}
+.wt-kpi-label {
+  font-family: var(--wt-font-sans);
+  font-size:   var(--wt-size-micro);
+  font-weight: 600;
+  letter-spacing: var(--wt-track-label);
+  text-transform: uppercase;
+  color: var(--wt-muted);
+  opacity: 0.7;
+}
+
+/* Mono — used for data values (pace, mm:ss, coordinates) */
+.wt-mono {
+  font-family: var(--wt-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Button text convention */
+.wt-btn-label {
+  font-family: var(--wt-font-sans);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}

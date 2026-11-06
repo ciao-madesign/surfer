@@ -1,0 +1,4 @@
+/* Font self-hosted (da WizTrail): nessuna richiesta a servizi esterni */
+@font-face{font-family:'Outfit';font-weight:400;font-display:swap;src:url(/fonts/outfit-400-normal-latin.woff2) format('woff2')}
+@font-face{font-family:'Outfit';font-weight:600;font-display:swap;src:url(/fonts/outfit-600-normal-latin.woff2) format('woff2')}
+@font-face{font-family:'DM Mono';font-weight:400;font-display:swap;src:url(/fonts/dm-mono-400-normal-latin.woff2) format('woff2')}

@@ -1,0 +1,10 @@
+{
+  "name": "private-trail-live",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "node dev.js",
+    "test": "node --test \"tests/*.test.js\""
+  }
+}

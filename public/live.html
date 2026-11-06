@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0a0f14">
+<title>Trail Live</title>
+<link rel="icon" href="/logo-mark.svg">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/colors_and_type.css">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="stylesheet" href="/lib/maplibre/maplibre-gl.css">
+<style>
+  body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+  header{padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid var(--wt-border)}
+  h1{font-size:1.1rem;margin:0;font-weight:600}
+  #map{flex:1 1 45%;min-height:220px;position:relative}
+  #ctl{position:absolute;top:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:6px}
+  #ctl button{min-height:36px;padding:4px 10px;background:rgba(10,15,20,.85)}
+  #panel{flex:1 1 55%;overflow:auto;padding:8px 12px calc(12px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+  #banner{display:none;background:var(--wt-warn);color:#1a1300;padding:6px 12px;font-size:var(--wt-size-small)}
+  #fatal{display:none;padding:32px 20px;text-align:center}
+  .runner{display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+  .runner .name{font-weight:600}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-top:8px}
+  .stats div{background:var(--wt-panel);border-radius:8px;padding:6px 8px}
+  .stats b{display:block;font-family:var(--wt-font-mono);font-weight:400;font-size:1rem}
+  .st-tracking{color:var(--wt-ok)}.st-offline,.st-no_gps{color:var(--wt-warn)}.st-paused{color:var(--wt-muted)}
+  .pin{width:28px;height:28px;border-radius:50%;border:3px solid #fff;color:#fff;font:600 13px var(--wt-font-sans);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,.6)}
+  .pin.old{opacity:.55}
+  .cp{width:12px;height:12px;background:#fff;border:3px solid #0a0f14;border-radius:3px;transform:rotate(45deg)}
+  #profile{width:100%;height:110px;display:block}
+  #weather{display:flex;gap:10px;flex-wrap:wrap}
+  .wx{flex:1;min-width:140px;background:var(--wt-panel);border-radius:8px;padding:8px}
+  table{width:100%;border-collapse:collapse;font-size:var(--wt-size-small)}
+  td,th{text-align:left;padding:3px 4px;border-bottom:1px solid var(--wt-border)}
+</style>
+</head>
+<body>
+<header><h1 id="title">Trail Live</h1><span class="small muted" id="updated"></span></header>
+<div id="banner"></div>
+<div id="fatal"><h2 id="fatal-t"></h2><p class="muted" id="fatal-m"></p></div>
+<div id="map"><div id="ctl"><button id="b3d">3D</button><button id="bbase">Topografica</button><button id="bfit">Percorso</button></div></div>
+<div id="panel">
+  <div class="card"><svg id="profile" role="img" aria-label="Profilo altimetrico"></svg>
+    <div class="small muted" id="profile-info"></div></div>
+  <div id="runners"></div>
+  <div class="card"><b>Meteo</b> <span class="small muted">stima del modello Open-Meteo, non una misura sul posto</span>
+    <div id="weather"></div></div>
+  <p class="small muted">Posizioni indicative, aggiornate a intervalli. Mostrano l'ultimo punto ricevuto e la sua età. I tempi non sostituiscono il cronometraggio ufficiale.</p>
+</div>
+<script src="/lib/maplibre/maplibre-gl.js"></script>
+<script type="module" src="/js/live.js"></script>
+</body>
+</html>

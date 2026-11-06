@@ -1,0 +1,18 @@
+/* Stile condiviso (token di colore e tipografia da WizTrail) */
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--wt-bg);color:var(--wt-ink);font-family:var(--wt-font-sans);font-size:15px;-webkit-text-size-adjust:100%}
+a{color:var(--wt-teal)}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--wt-card);border:1px solid var(--wt-border);border-radius:8px;padding:8px 12px;cursor:pointer;min-height:40px}
+button.primary{background:var(--wt-teal);color:var(--wt-teal-deep);border-color:var(--wt-teal);font-weight:600}
+button.danger{border-color:var(--wt-error);color:var(--wt-error)}
+button:disabled{opacity:.5;cursor:default}
+input,select{background:var(--wt-panel);border:1px solid var(--wt-border);border-radius:8px;padding:8px 10px;min-height:40px;width:100%}
+label{display:block;font-size:var(--wt-size-small);color:var(--wt-muted);margin:10px 0 4px}
+.mono{font-family:var(--wt-font-mono)}
+.muted{color:var(--wt-muted)}.small{font-size:var(--wt-size-small)}
+.card{background:var(--wt-card);border:1px solid var(--wt-border);border-radius:12px;padding:12px;margin:10px 0}
+.tag{display:inline-block;border:1px solid var(--wt-border);border-radius:6px;padding:0 6px;font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;margin-right:6px}

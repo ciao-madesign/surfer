@@ -1,0 +1,8 @@
+Chiavi da aggiungere in Info (Target → Info → Custom iOS Target Properties):
+
+NSLocationWhenInUseUsageDescription
+  "TrailTrack usa la posizione per mostrare dove sei durante la gara."
+NSLocationAlwaysAndWhenInUseUsageDescription
+  "Per continuare a condividere la posizione con lo schermo spento durante la gara."
+UIBackgroundModes  (Array)
+  Item 0: location
