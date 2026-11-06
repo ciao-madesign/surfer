@@ -154,6 +154,17 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
       const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
       return { participant: pubParticipant(p), deviceToken: dev, pairing };  // il token si vede una sola volta
     }
+    if (sub === 'participants' && method === 'POST' && parts.length === 5 && parts[4] === 'token') {
+      // codice smarrito: ne genera uno nuovo e invalida il vecchio (il corridore resta lo stesso, i dati restano)
+      const p = m.participants.find((x) => x.id === parts[3]);
+      if (!p) throw new HttpError(404, 'Partecipante non trovato');
+      const dev = token(24), oldHash = p.deviceHash;
+      p.deviceHash = sha256(dev);
+      await saveRace(m);
+      await store.pipeline([['SET', k.dev(p.deviceHash), JSON.stringify({ raceId: m.id, pid: p.id }), 'EX', SAFETY_TTL], ['DEL', k.dev(oldHash)]]);
+      const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
+      return { participant: pubParticipant(p), deviceToken: dev, pairing };
+    }
     if (sub === 'participants' && method === 'DELETE' && parts.length === 4) {
       const p = m.participants.find((x) => x.id === parts[3]);
       if (!p) throw new HttpError(404, 'Partecipante non trovato');

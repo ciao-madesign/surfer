@@ -226,3 +226,19 @@ test('prefisso chiavi: il database può essere condiviso con altri progetti', as
   const { createStore: cs } = await import('../server/store.js');
   const m = cs({}); await m.cmd(['SET', 'a', '1']); assert.equal(await m.cmd(['GET', 'a']), '1');
 });
+
+test('codice dispositivo smarrito: il nuovo sostituisce il vecchio, i dati restano', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  await send(api, r.dev, [pt(clock.now(), 1)]);
+  const n = await api('POST', `/api/admin/races/${r.id}/participants/${r.pid}/token`, {}, ADMIN);
+  assert.equal(n.status, 200);
+  assert.equal((await send(api, r.dev, [pt(clock.now() + 1000, 1.2)])).status, 401, 'il vecchio codice non vale più');
+  assert.equal((await send(api, n.json.deviceToken, [pt(clock.now() + 2000, 1.4)])).status, 200);
+  const live = await api('GET', '/api/live', null, {}, { t: r.view });
+  assert.equal(live.json.participants.length, 1);
+  assert.ok(live.json.participants[0].distKm >= 1.3);
+  assert.equal((await api('POST', `/api/admin/races/${r.id}/participants/zzz/token`, {}, ADMIN)).status, 404);
+  assert.equal((await api('POST', `/api/admin/races/${r.id}/participants/${r.pid}/token`, {})).status, 401);
+});

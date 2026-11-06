@@ -86,6 +86,11 @@ function render(extra = {}) {
     link, pairs,
     el('div', { class: 'card' }, el('b', {}, 'Partecipanti'),
       ...r.participants.map((p) => el('div', { class: 'row', style: 'margin:6px 0' }, el('span', { class: 'dot', style: `background:${p.color}` }), p.name,
+        el('button', { onclick: run(async () => {
+          if (!confirm(`Generare un nuovo codice per ${p.name}? Il vecchio smette di funzionare.`)) return;
+          const j = await api('POST', `races/${r.id}/participants/${p.id}/token`, {});
+          render({ pairing: { name: p.name, code: j.pairing } });
+        }) }, 'Nuovo codice'),
         act('Rimuovi', () => api('DELETE', `races/${r.id}/participants/${p.id}`)))),
       r.participants.length < 5 && r.status !== 'ended' ? el('div', { class: 'row', style: 'margin-top:8px' },
         el('input', { id: 'pname', placeholder: 'Nome o pseudonimo', maxLength: 40, style: 'flex:1' }),
