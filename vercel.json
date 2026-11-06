@@ -2,7 +2,8 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/index?p=:path*" },
     { "source": "/live", "destination": "/live.html" },
-    { "source": "/admin", "destination": "/admin.html" }
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/simulate", "destination": "/simulate.html" }
   ],
   "headers": [
     {

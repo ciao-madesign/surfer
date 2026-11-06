@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>Simulatore corridore</title><link rel="icon" href="/logo-mark.svg">
+<link rel="stylesheet" href="/css/fonts.css"><link rel="stylesheet" href="/css/colors_and_type.css"><link rel="stylesheet" href="/css/app.css">
+<style>main{max-width:560px;margin:0 auto;padding:16px}textarea{width:100%;background:var(--wt-panel);color:inherit;border:1px solid var(--wt-border);border-radius:8px;padding:8px;font:12px var(--wt-font-mono)}</style></head>
+<body><main>
+<h1>Simulatore corridore</h1>
+<p class="muted small">Strumento di prova: invia posizioni finte lungo il percorso, come farebbe l'app. Serve il codice di collegamento di un corridore e il link osservatori della stessa gara. Non usarlo durante una gara vera. Con accelerazione alta il corridore salta i checkpoint (punti troppo distanti): per provarli usa ×5 o ×1.</p>
+<label for="code">Codice di collegamento del corridore</label><textarea id="code" rows="3"></textarea>
+<label for="link">Link per gli osservatori (per leggere il percorso)</label><textarea id="link" rows="2"></textarea>
+<div class="row"><div style="flex:1"><label for="kmh">Velocità (km/h)</label><input id="kmh" type="number" value="9" min="1" max="25"></div>
+<div style="flex:1"><label for="acc">Accelerazione del tempo</label><select id="acc"><option value="1">×1 (tempo reale)</option><option value="5" selected>×5</option><option value="20">×20</option></select></div></div>
+<div class="row" style="margin-top:12px"><button class="primary" id="go">Avvia</button><button id="stop" disabled>Ferma</button></div>
+<div class="card small mono" id="log">Pronto.</div>
+<script type="module" src="/js/simulate.js"></script></main></body></html>
