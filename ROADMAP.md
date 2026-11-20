@@ -30,6 +30,12 @@ Traccar, OwnTracks, GPSLogger (oltre a browser e Overland), con una breve guida 
 - Licenze: Esri, OpenTopoMap, Open-Meteo, Vercel Hobby (uso non commerciale).
 - Integrazione con WizTrail: da studiare.
 
+## 6. Un solo dominio con WizTrail
+Obiettivo: evitare due domini separati.
+- Strada consigliata: stesso dominio, due progetti Vercel. WizTrail inoltra a Surfer un percorso (regola di rinvio); i due progetti si pubblicano separatamente.
+- Alternativa: un solo progetto Vercel. Più ordinato, ma sul piano gratuito c'è un limite di funzioni serverless e vanno fusi archivi e attività programmate.
+- Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/surfer/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
+
 ## Fuori dalla versione attuale
 Cronometraggio ufficiale, smartwatch, frequenza cardiaca, storico GPS permanente.
 - Trama di sfondo (`public/css/app.css`, opacity): ora 9%, da confermare prima del go-live.
