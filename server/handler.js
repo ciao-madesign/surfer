@@ -3,6 +3,7 @@ import { getJSON } from './store.js';
 import { HttpError, bad, token, shortId, sha256, safeEqual, hmac } from './util.js';
 import { buildCourse, project, haversine, encodePoint, decodePoint, runnerStats } from './geo.js';
 import { createArchive } from './archive.js';
+import { demoCourse, demoLive, demoStats } from './demo.js';
 
 const DAY = 86400;
 const KEEP_AFTER_END = DAY;          // 24 ore dalla fine della gara
@@ -533,6 +534,9 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
+      if (method === 'GET' && route === 'demo/course') return ok(demoCourse(), privateCache(300));
+      if (method === 'GET' && route === 'demo/live') return ok(demoLive(now()), NOCACHE);
+      if (method === 'GET' && route === 'demo/stats') return ok(demoStats(now()), NOCACHE);
       if (method === 'GET' && route === 'report') return ok(await report(query), privateCache(60));
       if (route === 'cron/archive') return ok(await cron(h));
       if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));

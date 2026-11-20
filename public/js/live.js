@@ -1,7 +1,8 @@
 import { BASEMAPS, DEM, POLL_MS, STATS_MS, TZ } from './config.js';
 
 const $ = (id) => document.getElementById(id);
-const token = location.hash.slice(1);
+const DEMO = location.pathname === '/demo';          // gara di esempio: dati simulati dal server, nessun link
+const token = DEMO ? 'demo-demo-demo-demo-demo' : location.hash.slice(1);
 const q = `t=${encodeURIComponent(token)}`;
 const state = { course: null, live: null, stats: null, map: null, markers: {}, base: 'sat', is3d: false, ready: false };
 
@@ -20,7 +21,7 @@ const fmtDur = (s) => { if (s == null) return '–'; const h = Math.floor(s / 36
 const fmtPace = (s) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} /km` : '–');
 const fmtAge = (s) => (s < 90 ? `${s} s fa` : s < 5400 ? `${Math.round(s / 60)} min fa` : `${Math.round(s / 3600)} h fa`);
 async function api(path) {
-  const r = await fetch(`/api/${path}${path.includes('?') ? '&' : '?'}${q}`);
+  const r = await fetch(DEMO ? `/api/demo/${path}` : `/api/${path}${path.includes('?') ? '&' : '?'}${q}`);
   if (!r.ok) { const e = new Error((await r.json().catch(() => ({}))).error || r.statusText); e.status = r.status; throw e; }
   return r.json();
 }
@@ -193,6 +194,9 @@ async function pollLive() {
 async function pollStats() { try { state.stats = await api('stats'); renderLive(); } catch { /* resta l'ultimo valore */ } }
 function every(fn, ms) { setInterval(() => { if (!document.hidden) fn(); }, ms); }
 
+if (DEMO) {
+  const d = $('demo'); d.style.display = 'block';
+}
 (async function start() {
   if (token.length < 20) return fatal('Link non valido', 'Apri il link completo che ti ha inviato l\'organizzatore.');
   try { state.course = await api('course'); } catch (e) {

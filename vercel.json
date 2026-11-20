@@ -39,6 +39,10 @@
     {
       "source": "/condizioni",
       "destination": "/condizioni.html"
+    },
+    {
+      "source": "/demo",
+      "destination": "/live.html"
     }
   ],
   "headers": [
@@ -60,7 +64,7 @@
       ]
     },
     {
-      "source": "/((?!privacy|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|robots\\.txt|$).*)",
+      "source": "/((?!privacy|demo|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|robots\\.txt|$).*)",
       "headers": [
         {
           "key": "X-Robots-Tag",

@@ -517,3 +517,16 @@ test('report: scade con l\'archivio (3 giorni senza profilo)', async () => {
   clock.advance(2 * 86400000);
   assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 410);
 });
+
+test('gara di esempio: dati simulati coerenti, senza credenziali né scritture', async () => {
+  const { api, store } = setup();
+  const c = await api('GET', '/api/demo/course');
+  assert.equal(c.status, 200);
+  assert.ok(c.json.course.totalKm > 35 && c.json.checkpoints.length === 4);
+  const live = await api('GET', '/api/demo/live');
+  assert.equal(live.json.participants.length, 3);
+  assert.ok(live.json.participants.every((p) => p.last && typeof p.distKm === 'number'));
+  const st = await api('GET', '/api/demo/stats');
+  assert.equal(st.json.participants.length, 3);
+  assert.equal((await store.cmd(['SMEMBERS', 'races'])).length, 0, 'la demo non crea nulla nell\'archivio');
+});
