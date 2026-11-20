@@ -22,7 +22,7 @@
     },
     {
       "source": "/gestisci",
-      "destination": "/admin.html"
+      "destination": "/gestisci.html"
     },
     {
       "source": "/crea",

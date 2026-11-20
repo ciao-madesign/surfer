@@ -1,7 +1,6 @@
 import { parseGPXString } from './gpx-parser.js';
 
 const $ = (id) => document.getElementById(id);
-const org = location.pathname.startsWith('/gestisci') ? decodeURIComponent(location.hash.slice(1)) : '';  // link organizzatore
 let key = sessionStorage.getItem('adminKey') || '';
 let course = null;      // {points:[[lat,lon,ele]], dist:[km], name}
 let current = null;
@@ -14,7 +13,7 @@ function el(tag, props = {}, ...kids) {
 }
 function msg(text, kind = 'ok') { const m = $('msg'); m.className = text ? kind : ''; m.textContent = text || ''; if (text) setTimeout(() => (m.className = ''), 6000); }
 async function api(method, path, body) {
-  const r = await fetch(`/api/admin/${path}`, { method, headers: { 'content-type': 'application/json', ...(org ? { 'x-org-token': org } : { 'x-admin-key': key }) }, body: body ? JSON.stringify(body) : undefined });
+  const r = await fetch(`/api/admin/${path}`, { method, headers: { 'content-type': 'application/json', 'x-admin-key': key }, body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
@@ -30,12 +29,7 @@ async function enter() {
   await loadRaces();
 }
 $('enter').onclick = run(enter);
-if (org) {
-  $('login').hidden = true; $('app').hidden = false; $('newrace').hidden = true; $('orgnote').hidden = false;
-  $('races').closest('section').hidden = true;
-  (async () => { try { const { races } = await api('GET', 'races'); if (races[0]) await open(races[0].id); else msg('Gara non trovata o scaduta', 'err'); }
-    catch (e) { msg(e.message, 'err'); } })();
-} else if (key) enter().catch(() => { sessionStorage.removeItem('adminKey'); key = ''; });
+if (key) enter().catch(() => { sessionStorage.removeItem('adminKey'); key = ''; });
 
 // ---------- GPX ----------
 $('gpx').onchange = run(async () => {

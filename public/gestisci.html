@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Surfer · Live · La tua gara</title>
+<link rel="icon" href="/logo-mark.svg">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/colors_and_type.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+main{max-width:680px;margin:0 auto;padding:16px 16px 64px}
+h1{font-size:1.5rem;margin:8px 0 4px}h2{font-size:1.15rem;margin:0 0 6px}
+.card{margin:14px 0}
+.secret{word-break:break-all;background:var(--wt-panel);padding:8px;border-radius:8px;font-family:var(--wt-font-mono);font-size:12px;margin:6px 0}
+#msg{position:sticky;top:0;z-index:5;padding:8px 12px;border-radius:8px;display:none;margin:8px 0}
+#msg.err{display:block;background:var(--wt-error);color:#1a0000}#msg.ok{display:block;background:var(--wt-ok);color:#001a08}
+.keynote{background:var(--wt-panel);border:1px solid var(--wt-border);border-radius:10px;padding:10px 12px;margin:10px 0}
+.steps{display:flex;gap:6px;margin:16px 0 4px;padding:0;list-style:none}
+.steps li{flex:1;text-align:center;font-size:.8rem;color:var(--wt-muted);border-top:3px solid var(--wt-border);padding-top:6px}
+.steps li.on{color:var(--wt-ink);border-color:var(--wt-teal,#2bb7da);font-weight:600}
+.steps li.done{border-color:var(--wt-ok);color:var(--wt-ink)}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:18px}
+.qr{width:200px;max-width:100%;background:#fff;padding:8px;border-radius:12px;margin:10px 0}
+.qr svg{display:block;width:100%;height:auto}
+.tabs{display:flex;gap:6px;margin:8px 0}
+.tabs button[aria-pressed=true]{background:var(--wt-teal-tint);border-color:var(--wt-teal,#2bb7da)}
+ol.how{padding-left:20px;margin:6px 0;line-height:1.6}
+.sig{font-size:.9rem}.sig.ok{color:var(--wt-ok)}.sig.wait{color:var(--wt-muted)}.sig.old{color:var(--wt-warn)}
+.rn{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+</style>
+</head>
+<body><main>
+<div id="msg" role="status"></div>
+<div id="app"><p class="muted">Caricamento…</p></div>
+<script src="/lib/qrcode/qrcode.js"></script>
+<script type="module" src="/js/gestisci.js"></script>
+</main></body></html>

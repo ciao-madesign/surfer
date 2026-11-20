@@ -8,7 +8,7 @@ import { createArchive, memoryArchive } from './server/archive.js';
 
 const handle = createHandler({ store: createStore(), archive: process.env.DATABASE_URL ? createArchive() : memoryArchive() });
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.txt': 'text/plain' };
-const rewrites = { '/live': '/live.html', '/admin': '/admin.html', '/simulate': '/simulate.html', '/track': '/track.html', '/privacy': '/privacy.html', '/demo': '/live.html', '/condizioni': '/condizioni.html', '/report': '/report.html', '/gestisci': '/admin.html', '/crea': '/crea.html' };
+const rewrites = { '/live': '/live.html', '/admin': '/admin.html', '/simulate': '/simulate.html', '/track': '/track.html', '/privacy': '/privacy.html', '/demo': '/live.html', '/condizioni': '/condizioni.html', '/report': '/report.html', '/gestisci': '/gestisci.html', '/crea': '/crea.html' };
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');

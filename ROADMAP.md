@@ -8,13 +8,13 @@ Ordine indicativo. Regola guida: la soluzione più semplice, gratuita e a basso 
 - Demo: percorso e checkpoint di esempio. Citare l'organizzatore del tracciato o chiedere il permesso; sostituire i ristori generici.
 - Sostituire l'indirizzo email di contatto con una casella dedicata.
 
-## 2. Creazione guidata (priorità alta)
-Percorso a passi, pensato per chi non è tecnico:
-1. Gara: nome, GPX, checkpoint (anche scelti sulla mappa).
-2. Partecipanti: nome e colore, fino a 5.
-3. Collegamento del telefono di ogni corridore con **QR code** (apre la pagina di tracciamento già collegata, senza copiare codici).
-4. **Istruzioni separate per iPhone e Android** (browser con schermo acceso; app per l'invio a schermo spento), con un controllo «sta arrivando il segnale».
-5. Link per chi guarda, con QR e pulsante di condivisione.
+## 2. Creazione guidata
+Fatto (`/gestisci`): percorso in 4 passi (corridori, collegamento telefoni con QR code, link per chi segue con QR e pulsante Condividi, avvio), istruzioni separate per iPhone e Android, controllo «Segnale ricevuto ✓» per ogni corridore.
+Da fare:
+- Provarlo sul campo con un telefono vero (iPhone e Android): QR, permessi di posizione, comportamento a schermo spento.
+- Android a schermo spento: aggiungere un'app (vedi punto 3).
+- Rivedere i testi di `/crea` e `/gestisci` (rifinitura finale di UX).
+- Checkpoint scelti direttamente sulla mappa.
 
 ## 3. Altre app di tracciamento
 Traccar, OwnTracks, GPSLogger (oltre a browser e Overland), con una breve guida per ciascuna.

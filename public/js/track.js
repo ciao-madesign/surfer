@@ -81,7 +81,7 @@ function onFix(pos) {
   ui();
 }
 function haversine(a, b, c, d) { const r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(x)); }
-function onGpsError(e) { showErr(e.code === 1 ? 'Posizione negata: abilitala in Impostazioni → Privacy → Localizzazione → Safari.' : 'Segnale GPS assente.'); if (e.code !== 1) flush('no_gps'); ui(); }
+function onGpsError(e) { showErr(e.code === 1 ? 'Posizione negata: abilitala per il browser nelle impostazioni del telefono (iPhone: Privacy → Localizzazione).' : 'Segnale GPS assente.'); if (e.code !== 1) flush('no_gps'); ui(); }
 
 async function keepAwake() {
   try { if ('wakeLock' in navigator && sharing && !document.hidden) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } }
@@ -111,5 +111,10 @@ window.addEventListener('online', () => { flush(); ui(); });
 
 // ---------- avvio ----------
 pairing = load(LS.pairing); queue = load(LS.queue) || [];
+// collegamento da QR code: il codice sta dopo «#» e non viene mai inviato a nessun server
+if (location.hash.length > 20) {
+  try { pairing = parsePairing(location.hash.slice(1)); save(LS.pairing, pairing); queue = []; save(LS.queue, queue); } catch { /* codice non valido: si usa il collegamento manuale */ }
+  history.replaceState(null, '', location.pathname);
+}
 if (queue.length && !pairing) { queue = []; save(LS.queue, queue); }
 ui(); setInterval(ui, 5000);

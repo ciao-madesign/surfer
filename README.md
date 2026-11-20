@@ -9,8 +9,8 @@ Il progetto è autonomo e fa parte della famiglia [WizTrail](https://github.com/
 ## Come funziona
 
 1. **Crea la gara** (`/crea`): carichi il GPX, scegli il nome e i checkpoint. Ricevi un indirizzo segreto per gestirla (`/gestisci#…`): va salvato tra i preferiti.
-2. **Aggiungi i corridori**: ognuno ottiene un codice per collegare il proprio telefono.
-3. **Condividi il link**: chi guarda apre `/live#…` da qualsiasi browser.
+2. **Percorso guidato** (`/gestisci`): aggiungi i corridori, collega ogni telefono inquadrando un QR code (istruzioni per iPhone e Android, con controllo del segnale), crea il link da condividere e avvia la gara.
+3. **Chi guarda** apre `/live#…` da qualsiasi browser.
 4. A fine gara le posizioni vengono cancellate automaticamente dopo 24 ore.
 
 ### Come il corridore invia la posizione
