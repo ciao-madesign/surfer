@@ -22,7 +22,7 @@ const COLORS = ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa'];
 const STATUS_LABEL = { waiting: 'In attesa', tracking: 'Tracking attivo', paused: 'In pausa',
   no_gps: 'Segnale GPS assente', offline: 'Connessione assente', finished: 'Gara conclusa' };
 
-export function createHandler({ store, env = process.env, now = Date.now, archive = createArchive(env), fetchImpl = globalThis.fetch }) {
+export function createHandler({ store, env = process.env, now = Date.now, archive = createArchive(env) }) {
   const courseCache = new Map();  // cache per istanza (lambda "calda"), 60 s
 
   // ---------- accesso ai dati ----------
@@ -347,32 +347,6 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     return out;
   }
 
-  // ---------- modulo contatti ----------
-  // Il messaggio viene inviato per email (Resend) e non viene salvato da noi. Limite: 3 messaggi al giorno per IP.
-  const TOPICS = { domanda: 'Domanda', segnalazione: 'Segnalazione', privacy: 'Privacy e dati personali' };
-  async function contact(headers, body) {
-    if (!env.RESEND_API_KEY || !env.CONTACT_TO || !env.CONTACT_FROM) throw new HttpError(503, 'Il modulo contatti non è ancora attivo');
-    if (body?.website) return { ok: true };            // campo trappola per i bot: finge di aver inviato
-    const topic = TOPICS[body?.topic] ? body.topic : 'domanda';
-    const message = text(body?.message, 3000, 'Messaggio');
-    if (message.length < 10) throw bad('Scrivi un messaggio un po\' più lungo');
-    const name = body?.name ? text(body.name, 80, 'Nome') : '';
-    const email = body?.email ? String(body.email).trim() : '';
-    if (email && !/^[^\s@<>]{1,64}@[^\s@<>]{1,200}\.[^\s@<>]{2,}$/.test(email)) throw bad('Indirizzo email non valido');
-    const ip = String(headers['x-forwarded-for'] || headers['x-real-ip'] || 'local').split(',')[0].trim();
-    const key = `ct:${sha256(ip).slice(0, 16)}:${Math.floor(now() / 86400000)}`;
-    const [n] = await store.pipeline([['INCR', key], ['EXPIRE', key, 2 * DAY]]);
-    if (n > 3) throw new HttpError(429, 'Hai inviato troppi messaggi oggi: riprova domani');
-    const r = await fetchImpl('https://api.resend.com/emails', {
-      method: 'POST', headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from: env.CONTACT_FROM, to: [env.CONTACT_TO], ...(email ? { reply_to: email } : {}),
-        subject: `[Surfer · Live] ${TOPICS[topic]}${name ? ` da ${name}` : ''}`,
-        text: `${message}\n\n—\nNome: ${name || '-'}\nEmail: ${email || '(non indicata)'}\nArgomento: ${TOPICS[topic]}` }),
-    });
-    if (!r.ok) { console.error('contact: invio non riuscito', r.status); throw new HttpError(502, 'Invio non riuscito: riprova tra poco'); }
-    return { ok: true };
-  }
-
   // ---------- report di gara ----------
   // Il collegamento al report si ricava dall'id della gara con una firma segreta: non serve salvarlo e resta
   // sempre lo stesso. Chi lo ha può leggere il report finché l'archivio lo conserva.
@@ -559,7 +533,6 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
-      if (method === 'POST' && route === 'contact') return ok(await contact(h, body));
       if (method === 'GET' && route === 'report') return ok(await report(query), privateCache(60));
       if (route === 'cron/archive') return ok(await cron(h));
       if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));

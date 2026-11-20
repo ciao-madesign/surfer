@@ -517,29 +517,3 @@ test('report: scade con l\'archivio (3 giorni senza profilo)', async () => {
   clock.advance(2 * 86400000);
   assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 410);
 });
-
-test('contatti: invio email, limiti e protezioni', async () => {
-  const sent = [];
-  const fetchImpl = async (url, init) => { sent.push({ url, ...init, body: JSON.parse(init.body) }); return { ok: true, status: 200 }; };
-  const env = { RESEND_API_KEY: 're_x', CONTACT_TO: 'dest@example.org', CONTACT_FROM: 'Surfer <no-reply@example.org>' };
-  const h = createHandler({ store: createStore({}), env, fetchImpl });
-  const post = (body, ip = '5.5.5.5') => h({ method: 'POST', path: '/api/contact', body, headers: { 'x-forwarded-for': ip } });
-  const ok = await post({ name: 'Anna', email: 'anna@example.com', topic: 'privacy', message: 'Vorrei cancellare i miei dati.' });
-  assert.equal(ok.status, 200);
-  assert.equal(sent.length, 1);
-  assert.equal(sent[0].url, 'https://api.resend.com/emails');
-  assert.deepEqual(sent[0].body.to, ['dest@example.org']);
-  assert.equal(sent[0].body.reply_to, 'anna@example.com');
-  assert.match(sent[0].body.subject, /Privacy/);
-  assert.equal((await post({ message: 'ciao' })).status, 400, 'messaggio troppo corto');
-  assert.equal((await post({ message: 'Messaggio valido lungo', email: 'non-una-email' })).status, 400);
-  const bot = await post({ message: 'Messaggio valido lungo', website: 'http://spam' }, '6.6.6.6');
-  assert.equal(bot.status, 200);
-  assert.equal(sent.length, 1, 'i bot non generano email');
-  await post({ message: 'Secondo messaggio valido' }); await post({ message: 'Terzo messaggio valido' });
-  assert.equal((await post({ message: 'Quarto messaggio valido' })).status, 429);
-  const off = createHandler({ store: createStore({}), env: {}, fetchImpl });
-  assert.equal((await off({ method: 'POST', path: '/api/contact', body: { message: 'Messaggio valido lungo' } })).status, 503);
-  const fail = createHandler({ store: createStore({}), env, fetchImpl: async () => ({ ok: false, status: 500 }) });
-  assert.equal((await fail({ method: 'POST', path: '/api/contact', body: { message: 'Messaggio valido lungo' }, headers: {} })).status, 502);
-});

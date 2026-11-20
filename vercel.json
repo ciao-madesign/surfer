@@ -37,10 +37,6 @@
       "destination": "/report.html"
     },
     {
-      "source": "/contatti",
-      "destination": "/contatti.html"
-    },
-    {
       "source": "/condizioni",
       "destination": "/condizioni.html"
     }
@@ -64,7 +60,7 @@
       ]
     },
     {
-      "source": "/((?!privacy|contatti|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|robots\\.txt|$).*)",
+      "source": "/((?!privacy|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|robots\\.txt|$).*)",
       "headers": [
         {
           "key": "X-Robots-Tag",
