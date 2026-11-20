@@ -118,6 +118,30 @@ Consiglio, in ordine: 1) satellitari Garmin tramite MapShare (poco lavoro, grand
 
 Per il corridore cambia poco: in iscrizione sceglie «telefono», «orologio Garmin» o «satellitare» e segue le istruzioni dedicate.
 
+## App nostra per il tracking (più avanti)
+
+Invece di affidarsi a Overland o al browser, il tracking lo fa un'app nostra per iPhone e Android. Non è troppo complesso da sviluppare: la parte impegnativa è mantenerla e farla approvare dagli store.
+
+**Vantaggi**
+- Tracking a schermo spento su entrambe le piattaforme, senza app esterne.
+- Posizioni conservate senza segnale e inviate appena torna (il browser oggi non lo fa).
+- Frequenza di invio regolata da noi in base a batteria e gara.
+- Un solo percorso per il corridore: iscrizione, collegamento e «Pronto», senza QR né configurazioni.
+- Notifiche vere («la gara parte tra 15 minuti, attiva il tracking»).
+- Base per le app su orologio (Apple Watch, Wear OS).
+
+**Limiti che restano**
+- Il GPS non si accende da solo all'ora del via: il corridore tocca comunque «Avvia», ma la notifica lo ricorda.
+- Su Android alcune marche (Xiaomi, Huawei, Samsung) chiudono le app in background: servono guide dedicate per marca.
+
+**Costi e impegno**
+- Sviluppo: una sola base di codice per iPhone e Android; prima versione in alcune settimane di lavoro. In `ios/` c'è già una bozza per iPhone, mai compilata.
+- Store: Apple circa 99 $ l'anno, Google circa 25 $ una tantum. Entrambi controllano con attenzione le app che usano la posizione in background: va giustificato bene, possibili rifiuti.
+- Manutenzione: ogni anno iOS e Android cambiano le regole sulla posizione; senza aggiornamenti l'app smette di funzionare.
+- Privacy: dati uguali a oggi, ma la responsabilità diventa interamente nostra.
+
+**Quando farla**: dopo che le gare aperte hanno un utilizzo reale. Browser e Overland restano come alternativa per chi non vuole installare nulla.
+
 ## Percorso consigliato (a fasi)
 
 **Fase 1: gara aperta minima**
@@ -140,7 +164,11 @@ Per il corridore cambia poco: in iscrizione sceglie «telefono», «orologio Gar
 - Satellitari Garmin via MapShare.
 - App per orologi Garmin.
 
-**Fase 5: extra**
+**Fase 5: app nostra**
+- App per iPhone e Android con tracking in background, notifiche di partenza e invio differito senza segnale.
+- Poi app per Apple Watch e Wear OS.
+
+**Fase 6: extra**
 - Notifiche push, lista pettorali importata, vista allenatore con tempi intermedi della squadra.
 - Spazio sponsor della gara e pubblicità sulla pagina degli spettatori.
 - Eventuale migrazione (Cloudflare) e piccolo server per i tracker economici.
