@@ -92,7 +92,7 @@ $('brun').onclick = () => {      // inquadra tutti i corridori (anche se lontani
 $('bbase').onclick = () => {
   if (!state.ready) return;
   state.base = state.base === 'sat' ? 'topo' : 'sat';
-  $('bbase').textContent = state.base === 'sat' ? 'Topografica' : 'Satellite';
+  $('bbase').textContent = state.base === 'sat' ? 'Mappa' : 'Satellite';
   state.map.setStyle(style(state.base));
   state.map.once('styledata', () => { addCourse(); if (state.is3d) state.map.setTerrain({ source: 'dem', exaggeration: 1.3 }); });
 };
@@ -120,7 +120,7 @@ function drawProfile() {
 function renderLive() {
   const d = state.live; if (!d) return;
   $('title').textContent = d.race.name;
-  $('updated').textContent = `agg. ${fmtTime(d.serverTime)}`;
+  $('updated').textContent = `Aggiornato alle ${fmtTime(d.serverTime)}`;
   if (state.ready) for (const p of d.participants) {
     if (!p.last) continue;
     let mk = state.markers[p.id];
@@ -145,11 +145,11 @@ function runnerCard(p, extra) {
       ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
     el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `${fmtAge(p.last.ageSec)} · ${fmtTime(p.last.t)}` : 'nessun dato'),
     p.offCourseM != null && p.offCourseM > 300
-      ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): tempi e stime sospesi`)
+      ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): stime sospese`)
       : p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');
   if (st) {
     card.append(el('div', { class: 'stats', style: 'grid-column:1/3' },
-      kpi('Quota', `${st.ele} m`), kpi('D+ / D−', `${st.gain} / ${st.loss} m`),
+      kpi('Quota', `${st.ele} m`), kpi('Dislivello + / −', `${st.gain} / ${st.loss} m`),
       kpi('Tempo', fmtDur(st.elapsedSec)), kpi('Velocità media', st.avgSpeedKmh != null ? `${st.avgSpeedKmh} km/h` : '–'),
       kpi('Passo medio', fmtPace(st.avgPaceSecKm)), kpi('Ultimi 10 min', fmtPace(st.recentPaceSecKm)),
       kpi('Salita', fmtPace(st.paceByGrade.salita)), kpi('Piano', fmtPace(st.paceByGrade.piano)), kpi('Discesa', fmtPace(st.paceByGrade.discesa)),
@@ -186,13 +186,13 @@ async function pollLive() {
   try {
     state.live = await api('live'); lastOk = Date.now(); banner('');
     if (state.live.race.status === 'ended') {
-      banner('Gara conclusa. Le posizioni restano visibili per 24 ore. ');
-      if (state.live.race.reportPath) { const a = document.createElement('a'); a.href = state.live.race.reportPath; a.textContent = 'Apri il report della gara'; $('banner').append(a); }
+      banner('Gara finita. Le posizioni restano visibili per 24 ore. ');
+      if (state.live.race.reportPath) { const a = document.createElement('a'); a.href = state.live.race.reportPath; a.textContent = 'Vedi il report'; $('banner').append(a); }
     }
     renderLive();
   } catch (e) {
     if (e.status === 401 || e.status === 410) return fatal(e.status === 410 ? 'Dati scaduti' : 'Link non valido', e.status === 410 ? 'Questa gara è conclusa e i dati sono stati cancellati.' : 'Il link è errato, revocato o scaduto. Chiedi un nuovo link all\'organizzatore.');
-    banner(`Connessione assente. Ultimo aggiornamento alle ${lastOk ? fmtTime(lastOk) : '–'}.`);
+    banner(`Nessuna connessione. Ultimo aggiornamento alle ${lastOk ? fmtTime(lastOk) : '–'}.`);
   }
 }
 async function pollStats() { try { state.stats = await api('stats'); renderLive(); } catch { /* resta l'ultimo valore */ } }

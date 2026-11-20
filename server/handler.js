@@ -20,8 +20,8 @@ const MAX_ANOM = 3;         // salti consecutivi scartati prima di fidarsi della
 const OFF_COURSE_M = 300;   // m: oltre, il punto non fa avanzare la progressiva sul percorso
 const MAX_PROG_ANOM = 5;    // avanzamenti irreali consecutivi prima di accettarli
 const COLORS = ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa'];
-const STATUS_LABEL = { waiting: 'In attesa', tracking: 'Tracking attivo', paused: 'In pausa',
-  no_gps: 'Segnale GPS assente', offline: 'Connessione assente', finished: 'Gara conclusa' };
+const STATUS_LABEL = { waiting: 'In attesa', tracking: 'Segnale attivo', paused: 'In pausa',
+  no_gps: 'Senza segnale GPS', offline: 'Senza connessione', finished: 'Gara conclusa' };
 
 export function createHandler({ store, env = process.env, now = Date.now, archive = createArchive(env) }) {
   const courseCache = new Map();  // cache per istanza (lambda "calda"), 60 s
