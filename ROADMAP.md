@@ -30,6 +30,9 @@ Traccar, OwnTracks, GPSLogger (oltre a browser e Overland), con una breve guida 
 - Licenze: Esri, OpenTopoMap, Open-Meteo, Vercel Hobby (uso non commerciale).
 - Integrazione con WizTrail: da studiare.
 
+## 5b. Audit di UX, flussi e privacy/consensi
+Audit più profondo dopo i testi: percorsi completi (organizzatore, corridore, chi segue), gestione dei consensi (browser e Overland, minorenni), informative, tempi di conservazione, messaggi di errore e casi limite.
+
 ## 6. Un solo dominio con WizTrail
 Obiettivo: evitare due domini separati.
 - Strada consigliata: stesso dominio, due progetti Vercel. WizTrail inoltra a Surfer un percorso (regola di rinvio); i due progetti si pubblicano separatamente.
