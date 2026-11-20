@@ -55,11 +55,11 @@ async function flush(status = 'tracking', force = false) {
     do {
       const batch = queue.slice(0, CHUNK);
       let code;
-      try { code = await post(batch, status); } catch { showErr('Connessione assente: i punti restano nel telefono.'); scheduleRetry(); return; }
+      try { code = await post(batch, status); } catch { showErr('Nessuna connessione: i dati restano nel telefono e partono appena torna.'); scheduleRetry(); return; }
       if (code === 200 || code === 400) { queue.splice(0, batch.length); save(LS.queue, queue); lastSentAt = Date.now(); retry = 5000; showErr(code === 400 ? 'Alcuni dati sono stati rifiutati dal server.' : ''); }
-      else if (code === 401) { showErr('Dispositivo non autorizzato: chiedi un nuovo codice.'); stop(false); return; }
-      else if (code === 410) { showErr('La gara è conclusa: condivisione terminata.'); stop(false); return; }
-      else { showErr('Server non disponibile, riprovo.'); scheduleRetry(); return; }
+      else if (code === 401) { showErr('Collegamento non più valido: chiedi un nuovo QR all\'organizzatore.'); stop(false); return; }
+      else if (code === 410) { showErr('La gara è finita: condivisione terminata.'); stop(false); return; }
+      else { showErr('Servizio non raggiungibile, riprovo.'); scheduleRetry(); return; }
     } while (queue.length);
   } finally { sending = false; ui(); }
 }
@@ -81,14 +81,14 @@ function onFix(pos) {
   ui();
 }
 function haversine(a, b, c, d) { const r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(x)); }
-function onGpsError(e) { showErr(e.code === 1 ? 'Posizione negata: abilitala per il browser nelle impostazioni del telefono (iPhone: Privacy → Localizzazione).' : 'Segnale GPS assente.'); if (e.code !== 1) flush('no_gps'); ui(); }
+function onGpsError(e) { showErr(e.code === 1 ? 'Posizione non consentita. Attivala per il browser nelle impostazioni del telefono.' : 'Segnale GPS assente.'); if (e.code !== 1) flush('no_gps'); ui(); }
 
 async function keepAwake() {
   try { if ('wakeLock' in navigator && sharing && !document.hidden) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } }
   catch { /* non supportato: l'avviso resta valido */ }
 }
 function start() {
-  if (!confirm('Condividere la tua posizione?\n\nDurante la gara la tua posizione verrà inviata a chi ha il link privato della gara. Puoi interrompere in qualsiasi momento. I dati vengono cancellati 24 ore dopo la fine della gara.')) return;
+  if (!confirm('Condividere la tua posizione?\n\nDurante la gara verrà inviata a chi ha il link. Puoi interrompere quando vuoi. I dati vengono cancellati 24 ore dopo la fine.')) return;
   if (!('geolocation' in navigator)) return showErr('Questo browser non supporta la posizione.');
   sharing = true; lastEnq = 0; showErr('');
   watchId = navigator.geolocation.watchPosition(onFix, onGpsError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
