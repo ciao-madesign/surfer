@@ -482,3 +482,38 @@ test('cron: chiude le gare dimenticate, riprova le archiviazioni e cancella i re
   assert.equal((await api('GET', '/api/cron/archive', null, { authorization: 'Bearer cron' })).json.purged, 2);
   assert.equal(await real.getRace(fin.id), null);
 });
+
+test('report: link firmato, leggibile finché l\'archivio lo conserva, senza traccia né account', async () => {
+  const { api, clock, store } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const m = JSON.parse(await store.cmd(['GET', `race:${r.id}`]));
+  m.accountId = 'acc1';
+  await store.cmd(['SET', `race:${r.id}`, JSON.stringify(m), 'EX', 100000]);
+  assert.equal((await api('GET', `/api/admin/races/${r.id}`, null, ADMIN)).json.race.reportPath, null, 'niente report prima della fine');
+  const end = await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  const path = end.json.race.reportPath;
+  assert.match(path, /^\/report#/);
+  const live = await api('GET', '/api/live', null, {}, { t: r.view });
+  assert.equal(live.json.race.reportPath, path, 'anche chi guarda trova il collegamento al report');
+  const t = path.split('#')[1];
+  const rep = await api('GET', '/api/report', null, {}, { t });
+  assert.equal(rep.status, 200);
+  assert.equal(rep.json.participants[0].name, 'Anna');
+  assert.ok(rep.json.meta.gain > 0);
+  assert.ok(!('course' in rep.json) && !('accountId' in rep.json));
+  assert.ok(!/"lat"|"lon"/.test(JSON.stringify(rep.json)));
+  assert.equal((await api('GET', '/api/report', null, {}, { t: t.slice(0, -1) + 'x' })).status, 401);
+  assert.equal((await api('GET', '/api/report', null, {}, { t: 'x.y' })).status, 401);
+  assert.equal((await api('GET', '/api/report', null, {}, {})).status, 401);
+  assert.equal((await api('GET', '/api/report', null, {}, { t: `altra.${t.split('.')[1]}` })).status, 401, 'la firma vale solo per la propria gara');
+});
+
+test('report: scade con l\'archivio (3 giorni senza profilo)', async () => {
+  const { api, clock } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const t = (await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN)).json.race.reportPath.split('#')[1];
+  clock.advance(2 * 86400000);
+  assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 200);
+  clock.advance(2 * 86400000);
+  assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 410);
+});

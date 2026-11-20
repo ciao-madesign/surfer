@@ -1,6 +1,6 @@
 // Logica delle API, indipendente da Vercel: handle({method, path, query, headers, body}) -> {status, headers, json}
 import { getJSON } from './store.js';
-import { HttpError, bad, token, shortId, sha256, safeEqual } from './util.js';
+import { HttpError, bad, token, shortId, sha256, safeEqual, hmac } from './util.js';
 import { buildCourse, project, haversine, encodePoint, decodePoint, runnerStats } from './geo.js';
 import { createArchive } from './archive.js';
 
@@ -276,6 +276,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     return {
       id: m.id, name: m.name, accountId: m.accountId ?? null, startedAt: m.startedAt, endedAt: m.endedAt,
       totalKm: course?.totalKm ?? null,
+      meta: course ? { gain: course.gain, loss: course.loss } : null,
       course: m.accountId && course ? { name: course.name, points: course.points, totalKm: course.totalKm, gain: course.gain, loss: course.loss } : null,
       expiresAt: m.accountId ? null : m.endedAt + ANON_REPORT_DAYS * DAY * 1000,
       checkpoints: cps.map((c, i) => ({ idx: i, name: c.name, km: c.km, radius: c.radius })),
@@ -346,9 +347,29 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     return out;
   }
 
+  // ---------- report di gara ----------
+  // Il collegamento al report si ricava dall'id della gara con una firma segreta: non serve salvarlo e resta
+  // sempre lo stesso. Chi lo ha può leggere il report finché l'archivio lo conserva.
+  const reportSecret = env.REPORT_SECRET || env.ADMIN_KEY || '';
+  const reportToken = (id) => `${id}.${hmac(reportSecret, `report:${id}`).slice(0, 32)}`;
+  const reportPath = (m) => (reportSecret && m.status === 'ended' && m.archive?.state === 'done' ? `/report#${reportToken(m.id)}` : null);
+
+  async function report(query) {
+    const t = String(query.t || '');
+    const i = t.lastIndexOf('.');
+    const id = t.slice(0, i), sig = t.slice(i + 1);
+    if (!reportSecret || i < 1 || !safeEqual(sig, hmac(reportSecret, `report:${id}`).slice(0, 32))) throw new HttpError(401, 'Link del report non valido');
+    if (!archive.enabled) throw new HttpError(404, 'Report non disponibile');
+    const r = await archive.getRace(id);
+    if (!r) throw new HttpError(404, 'Report non trovato o scaduto');
+    if (r.expiresAt != null && r.expiresAt < now()) throw new HttpError(410, 'Report scaduto');
+    const { course, accountId, ...pub } = r;      // la traccia e l'account non escono mai dal report
+    return { ...pub, serverTime: now() };
+  }
+
   const pubParticipant = (p) => ({ id: p.id, name: p.name, color: p.color });
   const pubMeta = (m) => ({ id: m.id, name: m.name, status: m.status, createdAt: m.createdAt, startedAt: m.startedAt,
-    endedAt: m.endedAt, archive: m.archive?.state ?? null, hasLink: !!m.viewHash, participants: m.participants.map(pubParticipant),
+    endedAt: m.endedAt, archive: m.archive?.state ?? null, reportPath: reportPath(m), hasLink: !!m.viewHash, participants: m.participants.map(pubParticipant),
     checkpoints: m.checkpoints.map(({ id, name, km, auto }) => ({ id, name, km, auto })) });
 
   // ---------- ricezione posizioni (app iOS) ----------
@@ -458,7 +479,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const course = await loadCourse(m.id);
     const last = toObj(await store.cmd(['HGETALL', k.last(m.id)]));
     const t = now();
-    return { race: { name: m.name, status: m.status, startedAt: m.startedAt, endedAt: m.endedAt, totalKm: course?.totalKm ?? null },
+    return { race: { name: m.name, status: m.status, startedAt: m.startedAt, endedAt: m.endedAt, totalKm: course?.totalKm ?? null, reportPath: reportPath(m) },
       participants: m.participants.map((p) => {
         const l = last[p.id] ? JSON.parse(last[p.id]) : null;
         const st = participantStatus(m, l);
@@ -512,6 +533,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
+      if (method === 'GET' && route === 'report') return ok(await report(query), privateCache(60));
       if (route === 'cron/archive') return ok(await cron(h));
       if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));

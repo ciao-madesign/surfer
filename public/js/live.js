@@ -180,7 +180,10 @@ let lastOk = 0;
 async function pollLive() {
   try {
     state.live = await api('live'); lastOk = Date.now(); banner('');
-    if (state.live.race.status === 'ended') banner('Gara conclusa. I dati restano disponibili per 24 ore.');
+    if (state.live.race.status === 'ended') {
+      banner('Gara conclusa. Le posizioni restano visibili per 24 ore. ');
+      if (state.live.race.reportPath) { const a = document.createElement('a'); a.href = state.live.race.reportPath; a.textContent = 'Apri il report della gara'; $('banner').append(a); }
+    }
     renderLive();
   } catch (e) {
     if (e.status === 401 || e.status === 410) return fatal(e.status === 410 ? 'Dati scaduti' : 'Link non valido', e.status === 410 ? 'Questa gara è conclusa e i dati sono stati cancellati.' : 'Il link è errato, revocato o scaduto. Chiedi un nuovo link all\'organizzatore.');

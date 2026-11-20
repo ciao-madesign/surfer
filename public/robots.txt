@@ -5,6 +5,7 @@ Disallow: /live
 Disallow: /gestisci
 Disallow: /admin
 Disallow: /crea
+Disallow: /report
 Disallow: /track
 Disallow: /simulate
 Disallow: /api/

@@ -63,13 +63,13 @@ export function neonArchive(databaseUrl) {
       // Una sola transazione: o si scrive tutto o niente. Ripetibile: prima si svuotano i figli della gara.
       await sql.transaction((tx) => [
         tx.query(
-          `INSERT INTO races (id, account_id, name, status, course, total_km, started_at, ended_at, archived_at, expires_at)
-           VALUES ($1, $2, $3, 'ended', $4::jsonb, $5, $6, $7, now(), $8)
+          `INSERT INTO races (id, account_id, name, status, course, total_km, started_at, ended_at, archived_at, expires_at, meta)
+           VALUES ($1, $2, $3, 'ended', $4::jsonb, $5, $6, $7, now(), $8, $9::jsonb)
            ON CONFLICT (id) DO UPDATE SET account_id = EXCLUDED.account_id, name = EXCLUDED.name, status = 'ended',
              course = EXCLUDED.course, total_km = EXCLUDED.total_km, started_at = EXCLUDED.started_at,
-             ended_at = EXCLUDED.ended_at, archived_at = now(), expires_at = EXCLUDED.expires_at`,
+             ended_at = EXCLUDED.ended_at, archived_at = now(), expires_at = EXCLUDED.expires_at, meta = EXCLUDED.meta`,
           [s.id, s.accountId ?? null, s.name, s.course ? JSON.stringify(s.course) : null, s.totalKm ?? null,
-            ts(s.startedAt), ts(s.endedAt), ts(s.expiresAt)]),
+            ts(s.startedAt), ts(s.endedAt), ts(s.expiresAt), s.meta ? JSON.stringify(s.meta) : null]),
         tx.query('DELETE FROM participants WHERE race_id = $1', [s.id]),   // elimina a cascata anche i passaggi
         tx.query('DELETE FROM checkpoints WHERE race_id = $1', [s.id]),
         tx.query(
@@ -93,7 +93,7 @@ export function neonArchive(databaseUrl) {
     async getRace(id) {
       const sql = await db();
       const [rows, cps, parts, pass] = await sql.transaction((tx) => [
-        tx.query('SELECT id, name, account_id, total_km, course, extract(epoch FROM started_at) * 1000 AS started, extract(epoch FROM ended_at) * 1000 AS ended, extract(epoch FROM expires_at) * 1000 AS expires FROM races WHERE id = $1', [id]),
+        tx.query('SELECT id, name, account_id, total_km, course, meta, extract(epoch FROM started_at) * 1000 AS started, extract(epoch FROM ended_at) * 1000 AS ended, extract(epoch FROM expires_at) * 1000 AS expires FROM races WHERE id = $1', [id]),
         tx.query('SELECT idx, name, km, radius FROM checkpoints WHERE race_id = $1 ORDER BY idx', [id]),
         tx.query('SELECT id, name, color, stats FROM participants WHERE race_id = $1 ORDER BY id', [id]),
         tx.query('SELECT participant_id, cp_idx, extract(epoch FROM t) * 1000 AS t FROM passages WHERE race_id = $1 ORDER BY cp_idx', [id]),
@@ -101,7 +101,7 @@ export function neonArchive(databaseUrl) {
       const r = rows[0];
       if (!r) return null;
       return {
-        id: r.id, name: r.name, accountId: r.account_id, totalKm: r.total_km, course: r.course,
+        id: r.id, name: r.name, accountId: r.account_id, totalKm: r.total_km, course: r.course, meta: r.meta,
         startedAt: r.started == null ? null : Math.round(r.started), endedAt: r.ended == null ? null : Math.round(r.ended),
         expiresAt: r.expires == null ? null : Math.round(r.expires),
         checkpoints: cps.map((c) => ({ idx: c.idx, name: c.name, km: c.km, radius: c.radius })),
