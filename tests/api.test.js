@@ -282,3 +282,43 @@ test('diagnostica: l\'organizzatore vede l\'ultimo invio ricevuto e la distanza 
   const live = (await api('GET', '/api/live', null, {}, { t: r.view })).json.participants[0];
   assert.ok(live.offCourseM > 100000 && live.last.lat === 47.5);
 });
+
+test('creazione pubblica: ogni organizzatore gestisce solo la propria gara', async () => {
+  const { api } = setup();
+  const mk = (ip) => api('POST', '/api/races', { name: 'Mia gara', course: { points: COURSE } }, { 'x-forwarded-for': ip });
+  const a = await mk('1.1.1.1'), b = await mk('2.2.2.2');
+  assert.equal(a.status, 200);
+  assert.ok(a.json.organizerToken && a.json.organizerPath.startsWith('/gestisci#'));
+  const ta = { 'x-org-token': a.json.organizerToken }, idA = a.json.race.id, idB = b.json.race.id;
+  // vede e modifica la propria gara
+  assert.equal((await api('GET', `/api/admin/races/${idA}`, null, ta)).status, 200);
+  const p = await api('POST', `/api/admin/races/${idA}/participants`, { name: 'Anna' }, ta);
+  assert.equal(p.status, 200);
+  assert.equal((await api('POST', `/api/admin/races/${idA}/link`, {}, ta)).status, 200);
+  // non vede quella degli altri, non può crearne con l'API admin né elencarle tutte
+  assert.equal((await api('GET', `/api/admin/races/${idB}`, null, ta)).status, 403);
+  assert.equal((await api('POST', '/api/admin/races', { name: 'x' }, ta)).status, 403);
+  assert.deepEqual((await api('GET', '/api/admin/races', null, ta)).json.races.map((r) => r.id), [idA]);
+  // token inventato o troppo corto
+  assert.equal((await api('GET', `/api/admin/races/${idA}`, null, { 'x-org-token': 'a'.repeat(32) })).status, 401);
+  assert.equal((await api('GET', `/api/admin/races/${idA}`, null, { 'x-org-token': 'x' })).status, 401);
+  // il token non compare nelle risposte di lettura
+  assert.ok(!JSON.stringify((await api('GET', `/api/admin/races/${idA}`, null, ta)).json).includes(a.json.organizerToken));
+  // eliminando la gara il link organizzatore smette di funzionare
+  assert.equal((await api('DELETE', `/api/admin/races/${idA}`, null, ta)).status, 200);
+  assert.equal((await api('GET', `/api/admin/races/${idA}`, null, ta)).status, 401);
+});
+
+test('creazione pubblica: limite giornaliero per IP e tetto globale', async () => {
+  const { api, clock } = setup();
+  const mk = (ip) => api('POST', '/api/races', { name: 'G' }, { 'x-forwarded-for': ip });
+  for (let i = 0; i < 5; i++) assert.equal((await mk('9.9.9.9')).status, 200);
+  assert.equal((await mk('9.9.9.9')).status, 429);
+  assert.equal((await mk('8.8.8.8')).status, 200);     // un altro IP può creare
+  clock.advance(86400000 * 1.1);
+  assert.equal((await mk('9.9.9.9')).status, 200);     // il giorno dopo si riparte
+  const h = createHandler({ store: createStore({}), env: { MAX_ACTIVE_RACES: '1' } });
+  const c = (ip) => h({ method: 'POST', path: '/api/races', body: { name: 'G' }, headers: { 'x-forwarded-for': ip } });
+  assert.equal((await c('1.2.3.4')).status, 200);
+  assert.equal((await c('1.2.3.5')).status, 503);
+});

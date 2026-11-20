@@ -21,7 +21,7 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
   const k = {
     race: (id) => `race:${id}`, course: (id) => `course:${id}`, last: (id) => `last:${id}`,
     pos: (id, p) => `pos:${id}:${p}`, pass: (id) => `pass:${id}`, det: (id) => `det:${id}`,
-    view: (h) => `v:${h}`, dev: (h) => `d:${h}`,
+    view: (h) => `v:${h}`, dev: (h) => `d:${h}`, org: (h) => `o:${h}`,
   };
 
   async function loadRace(id) {
@@ -44,6 +44,7 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     const keys = [k.race(m.id), k.course(m.id), k.last(m.id), k.pass(m.id), k.det(m.id)];
     for (const p of m.participants) { keys.push(k.pos(m.id, p.id), k.dev(p.deviceHash)); }
     if (m.viewHash) keys.push(k.view(m.viewHash));
+    if (m.orgHash) keys.push(k.org(m.orgHash));
     return keys;
   }
   const expireRace = (m, secs) => store.pipeline(allKeys(m).map((key) => ['EXPIRE', key, secs]));
@@ -52,6 +53,18 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
   function admin(headers) {
     if (!env.ADMIN_KEY) throw new HttpError(503, 'Amministrazione non configurata (ADMIN_KEY)');
     if (!safeEqual(headers['x-admin-key'] || '', env.ADMIN_KEY)) throw new HttpError(401, 'Chiave amministratore errata');
+  }
+  // admin globale (ADMIN_KEY) oppure organizzatore di UNA gara (x-org-token)
+  async function authorize(headers) {
+    const org = headers['x-org-token'];
+    if (org) {
+      if (org.length < 20) throw new HttpError(401, 'Link organizzatore non valido');
+      const raceId = await store.cmd(['GET', k.org(sha256(org))]);
+      if (!raceId) throw new HttpError(401, 'Link organizzatore non valido o scaduto');
+      return { raceId };
+    }
+    admin(headers);
+    return { raceId: null };
   }
   const bearer = (headers) => (headers.authorization || '').replace(/^Bearer\s+/i, '');
 
@@ -91,14 +104,57 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     return m.status === 'live' ? 'tracking' : 'waiting';
   }
 
+  // ---------- creazione gara (admin e pubblico) ----------
+  async function createRace(body, withOrganizer = false) {
+    const name = text(body?.name, 80, 'Nome');
+    const id = shortId();
+    const meta = { id, name, status: 'draft', createdAt: now(), startedAt: null, endedAt: null,
+      viewHash: null, orgHash: null, participants: [], checkpoints: [] };
+    let course = null;
+    if (body.course) {
+      course = buildCourse(parseCoursePoints(body.course.points));
+      course.name = body.course.name ? String(body.course.name).slice(0, 80) : name;
+    }
+    const cps = Array.isArray(body.checkpoints) ? body.checkpoints : [];
+    if (cps.length > 30) throw bad('Massimo 30 checkpoint');
+    if (cps.length && !course) throw bad('Servono la traccia GPX per i checkpoint');
+    meta.checkpoints = cps.map((c, i) => {
+      const lat = num(c.lat, -90, 90, 'lat checkpoint'), lon = num(c.lon, -180, 180, 'lon checkpoint');
+      return { id: `c${i + 1}`, name: text(c.name, 60, 'Nome checkpoint'), lat, lon,
+        km: Math.round(project(course, lat, lon).km * 1000) / 1000,
+        auto: c.auto !== false, radius: Math.min(200, Math.max(20, Number(c.radius) || 50)) };
+    }).sort((a, b) => a.km - b.km);
+    let orgToken = null;
+    if (withOrganizer) { orgToken = token(24); meta.orgHash = sha256(orgToken); }
+    await saveRace(meta);
+    const ops = [['SADD', 'races', id]];
+    if (course) ops.push(['SET', k.course(id), JSON.stringify(course), 'EX', SAFETY_TTL]);
+    if (orgToken) ops.push(['SET', k.org(meta.orgHash), id, 'EX', SAFETY_TTL]);
+    await store.pipeline(ops);
+    return { race: pubMeta(meta), course: course && { totalKm: course.totalKm, gain: course.gain, loss: course.loss },
+      ...(orgToken ? { organizerToken: orgToken, organizerPath: `/gestisci#${orgToken}` } : {}) };
+  }
+
+  // creazione pubblica: limiti per indirizzo IP (salvato solo come hash, 1 giorno) e tetto globale
+  async function publicCreate(headers, body) {
+    const ip = String(headers['x-forwarded-for'] || headers['x-real-ip'] || 'local').split(',')[0].trim();
+    const day = Math.floor(now() / 86400000);
+    const key = `rc:${sha256(ip).slice(0, 16)}:${day}`;
+    const [n] = await store.pipeline([['INCR', key], ['EXPIRE', key, 2 * DAY]]);
+    if (n > (Number(env.CREATE_PER_DAY) || 5)) throw new HttpError(429, 'Troppe gare create oggi: riprova domani');
+    const active = await store.cmd(['SMEMBERS', 'races']);
+    if (active.length >= (Number(env.MAX_ACTIVE_RACES) || 500)) throw new HttpError(503, 'Servizio al completo: riprova tra poco');
+    return createRace(body, true);
+  }
+
   // ---------- rotte amministratore ----------
   async function adminRoutes(method, parts, body, headers, reqOrigin) {
-    admin(headers);
+    const scope = await authorize(headers);
     // /admin/races
     if (parts[0] !== 'races') throw new HttpError(404, 'Non trovato');
     if (parts.length === 1) {
       if (method === 'GET') {
-        const ids = await store.cmd(['SMEMBERS', 'races']);
+        const ids = scope.raceId ? [scope.raceId] : await store.cmd(['SMEMBERS', 'races']);
         const out = [];
         for (const id of ids) {
           const m = await getJSON(store, k.race(id));
@@ -108,31 +164,12 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
         return { races: out };
       }
       if (method === 'POST') {
-        const name = text(body?.name, 80, 'Nome');
-        const id = shortId();
-        const meta = { id, name, status: 'draft', createdAt: now(), startedAt: null, endedAt: null,
-          viewHash: null, participants: [], checkpoints: [] };
-        let course = null;
-        if (body.course) {
-          course = buildCourse(parseCoursePoints(body.course.points));
-          course.name = body.course.name ? String(body.course.name).slice(0, 80) : name;
-        }
-        const cps = Array.isArray(body.checkpoints) ? body.checkpoints : [];
-        if (cps.length > 30) throw bad('Massimo 30 checkpoint');
-        if (cps.length && !course) throw bad('Servono la traccia GPX per i checkpoint');
-        meta.checkpoints = cps.map((c, i) => {
-          const lat = num(c.lat, -90, 90, 'lat checkpoint'), lon = num(c.lon, -180, 180, 'lon checkpoint');
-          return { id: `c${i + 1}`, name: text(c.name, 60, 'Nome checkpoint'), lat, lon,
-            km: Math.round(project(course, lat, lon).km * 1000) / 1000,
-            auto: c.auto !== false, radius: Math.min(200, Math.max(20, Number(c.radius) || 50)) };
-        }).sort((a, b) => a.km - b.km);
-        await saveRace(meta);
-        if (course) await store.cmd(['SET', k.course(id), JSON.stringify(course), 'EX', SAFETY_TTL]);
-        await store.cmd(['SADD', 'races', id]);
-        return { race: pubMeta(meta), course: course && { totalKm: course.totalKm, gain: course.gain, loss: course.loss } };
+        if (scope.raceId) throw new HttpError(403, 'Non consentito');
+        return createRace(body);
       }
       throw new HttpError(405, 'Metodo non consentito');
     }
+    if (scope.raceId && parts[1] !== scope.raceId) throw new HttpError(403, 'Non consentito');
     const m = await loadRace(parts[1]);
     const sub = parts[2];
     if (!sub) {
@@ -365,6 +402,7 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
+      if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));
       if (route === 'device/overland' && method === 'POST') return ok(await overland(h, query, body));
