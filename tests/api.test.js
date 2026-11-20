@@ -376,3 +376,109 @@ test('GPS: salti impossibili e precisione pessima vengono scartati', async () =>
   const r4 = await send(api, r.dev, [pt(base + 180000, 5.03)]);
   assert.equal(r4.json.accepted, 1);
 });
+
+// ---------- archiviazione a fine gara ----------
+import { memoryArchive } from '../server/archive.js';
+
+function setupArchive(extra = {}, archive = memoryArchive()) {
+  let t = Date.parse('2026-11-14T08:00:00Z');
+  const clock = { now: () => t, advance: (ms) => { t += ms; } };
+  const store = createStore({}, clock.now);
+  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto', ARCHIVE_RETRY_MS: '0', CRON_SECRET: 'cron', ...extra }, now: clock.now, archive });
+  const api = async (method, path, body, headers = {}, query = {}) => handle({ method, path, body, headers, query, origin: 'https://x.test' });
+  return { clock, store, api, archive };
+}
+async function finishedRace(api, clock) {
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const base = clock.now();
+  clock.advance(3000000);
+  await send(api, r.dev, [pt(base + 120000, 1), pt(base + 600000, 4.9), pt(base + 660000, 5.0), pt(base + 690000, 5.0005), pt(base + 720000, 5.1), pt(base + 1500000, 9)]);
+  return r;
+}
+
+test('archivio: a fine gara vanno su Neon solo tempi e statistiche, senza coordinate GPS', async () => {
+  const { api, clock, archive, store } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const end = await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  assert.equal(end.json.race.archive, 'done');
+  const s = await archive.getRace(r.id);
+  assert.equal(s.checkpoints.length, 1);
+  assert.equal(s.participants[0].name, 'Anna');
+  assert.equal(s.participants[0].passages.length, 1);          // il passaggio al checkpoint
+  assert.ok(s.participants[0].stats.distKm > 8);
+  assert.equal(s.participants[0].stats.etaSec, null);          // niente stima a gara finita
+  assert.equal(s.course, null, 'senza profilo la traccia non viene conservata');
+  assert.equal(s.expiresAt, s.endedAt + 3 * 86400000, 'report disponibile 3 giorni');
+  assert.ok(!/"lat"|"lon"/.test(JSON.stringify(s)), 'nessuna coordinata GPS nell\'archivio');
+  const ttl = await store.cmd(['TTL', `race:${r.id}`]);
+  assert.ok(ttl <= 86400 && ttl > 0, 'Redis si svuota entro 24 ore');
+});
+
+test('archivio: con un profilo la traccia viene conservata e non scade', async () => {
+  const { api, clock, archive, store } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const m = JSON.parse(await store.cmd(['GET', `race:${r.id}`]));
+  m.accountId = 'acc1';
+  await store.cmd(['SET', `race:${r.id}`, JSON.stringify(m), 'EX', 100000]);
+  await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  const s = await archive.getRace(r.id);
+  assert.equal(s.accountId, 'acc1');
+  assert.ok(s.course && s.course.points.length === 11);
+  assert.equal(s.expiresAt, null);
+});
+
+test('archivio: se Neon non risponde i dati restano su Redis e il nuovo tentativo funziona', async () => {
+  let down = true;
+  const real = memoryArchive();
+  const flaky = { ...real, saveRace: async (s) => { if (down) throw new Error('database non raggiungibile'); return real.saveRace(s); } };
+  const { api, clock, store } = setupArchive({}, flaky);
+  const r = await finishedRace(api, clock);
+  const end = await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  assert.equal(end.json.race.archive, 'pending');
+  assert.ok((await store.cmd(['TTL', `race:${r.id}`])) > 86400, 'dati conservati più a lungo finché non c\'è conferma');
+  assert.equal(await real.getRace(r.id), null);
+  down = false;
+  const again = await api('POST', `/api/admin/races/${r.id}/archive`, {}, ADMIN);
+  assert.equal(again.json.archive.state, 'done');
+  assert.ok((await store.cmd(['TTL', `race:${r.id}`])) <= 86400, 'dopo la conferma scade entro 24 ore');
+  assert.ok(await real.getRace(r.id));
+  assert.equal((await store.cmd(['SMEMBERS', 'archq'])).length, 0);
+});
+
+test('archivio: la verifica fallita lascia la gara in sospeso', async () => {
+  const bad = { ...memoryArchive(), saveRace: async () => ({ ok: false, counts: {} }) };
+  const { api, clock } = setupArchive({}, bad);
+  const r = await finishedRace(api, clock);
+  assert.equal((await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN)).json.race.archive, 'pending');
+});
+
+test('archivio disattivato: comportamento di prima (scadenza 24 ore)', async () => {
+  const { api, clock, store } = setupArchive({}, { kind: 'none', enabled: false });
+  const r = await finishedRace(api, clock);
+  assert.equal((await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN)).json.race.archive, 'off');
+  assert.ok((await store.cmd(['TTL', `race:${r.id}`])) <= 86400);
+});
+
+test('cron: chiude le gare dimenticate, riprova le archiviazioni e cancella i report scaduti', async () => {
+  let down = true;
+  const real = memoryArchive();
+  const flaky = { ...real, saveRace: async (s) => { if (down) throw new Error('giù'); return real.saveRace(s); } };
+  const { api, clock } = setupArchive({}, flaky);
+  assert.equal((await api('GET', '/api/cron/archive', null, {})).status, 401);
+  assert.equal((await api('GET', '/api/cron/archive', null, { authorization: 'Bearer no' })).status, 401);
+  const dim = await race(api);                                          // gara avviata e dimenticata
+  await api('POST', `/api/admin/races/${dim.id}/start`, {}, ADMIN);
+  const fin = await finishedRace(api, clock);
+  await api('POST', `/api/admin/races/${fin.id}/end`, {}, ADMIN);       // archiviazione in sospeso (Neon giù)
+  clock.advance(37 * 3600000);
+  down = false;
+  const out = await api('GET', '/api/cron/archive', null, { authorization: 'Bearer cron' });
+  assert.equal(out.status, 200);
+  assert.equal(out.json.autoEnded, 1);
+  assert.ok(out.json.archived >= 1);
+  assert.ok(await real.getRace(dim.id) && await real.getRace(fin.id));
+  clock.advance(4 * 86400000);
+  assert.equal((await api('GET', '/api/cron/archive', null, { authorization: 'Bearer cron' })).json.purged, 2);
+  assert.equal(await real.getRace(fin.id), null);
+});

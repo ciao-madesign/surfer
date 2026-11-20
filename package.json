@@ -2,9 +2,14 @@
   "name": "private-trail-live",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "node dev.js",
     "test": "node --test \"tests/*.test.js\""
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.1"
   }
 }

@@ -2,6 +2,7 @@
 import { getJSON } from './store.js';
 import { HttpError, bad, token, shortId, sha256, safeEqual } from './util.js';
 import { buildCourse, project, haversine, encodePoint, decodePoint, runnerStats } from './geo.js';
+import { createArchive } from './archive.js';
 
 const DAY = 86400;
 const KEEP_AFTER_END = DAY;          // 24 ore dalla fine della gara
@@ -10,6 +11,8 @@ const MAX_PARTICIPANTS = 5;
 const MAX_HISTORY = 4000;
 const MAX_BATCH = 120;
 const RATE_PER_MIN = 30;
+const ANON_REPORT_DAYS = 3;  // gare senza profilo: tempi e statistiche restano 3 giorni
+const AUTO_END_HOURS = 36;   // chiusura automatica di una gara dimenticata aperta
 const MAX_ACC = 150;        // m: precisione peggiore accettata
 const MAX_SPEED = 12;       // m/s: oltre, un salto di posizione è considerato anomalo
 const MAX_ANOM = 3;         // salti consecutivi scartati prima di fidarsi della nuova posizione
@@ -19,7 +22,7 @@ const COLORS = ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa'];
 const STATUS_LABEL = { waiting: 'In attesa', tracking: 'Tracking attivo', paused: 'In pausa',
   no_gps: 'Segnale GPS assente', offline: 'Connessione assente', finished: 'Gara conclusa' };
 
-export function createHandler({ store, env = process.env, now = Date.now }) {
+export function createHandler({ store, env = process.env, now = Date.now, archive = createArchive(env) }) {
   const courseCache = new Map();  // cache per istanza (lambda "calda"), 60 s
 
   // ---------- accesso ai dati ----------
@@ -29,10 +32,10 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     view: (h) => `v:${h}`, dev: (h) => `d:${h}`, org: (h) => `o:${h}`,
   };
 
-  async function loadRace(id) {
+  async function loadRace(id, { allowExpired = false } = {}) {
     const m = await getJSON(store, k.race(id));
     if (!m) throw new HttpError(404, 'Gara non trovata');
-    if (m.status === 'ended' && now() > m.endedAt + KEEP_AFTER_END * 1000) throw new HttpError(410, 'Dati scaduti');
+    if (!allowExpired && m.status === 'ended' && now() > m.endedAt + KEEP_AFTER_END * 1000) throw new HttpError(410, 'Dati scaduti');
     return m;
   }
   const saveRace = (m, ttl = SAFETY_TTL) => store.cmd(['SET', k.race(m.id), JSON.stringify(m), 'EX', ttl]);
@@ -175,7 +178,7 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
       throw new HttpError(405, 'Metodo non consentito');
     }
     if (scope.raceId && parts[1] !== scope.raceId) throw new HttpError(403, 'Non consentito');
-    const m = await loadRace(parts[1]);
+    const m = await loadRace(parts[1], { allowExpired: parts[2] === 'archive' });
     const sub = parts[2];
     if (!sub) {
       if (method === 'GET') {
@@ -243,12 +246,13 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     if ((sub === 'start' || sub === 'end') && method === 'POST') {
       if (m.status === 'ended') throw bad('Gara già conclusa');
       if (sub === 'start') { m.status = 'live'; m.startedAt = m.startedAt ?? now(); await saveRace(m); }
-      else {
-        m.status = 'ended'; m.endedAt = now(); await saveRace(m, KEEP_AFTER_END);
-        await expireRace(m, KEEP_AFTER_END);   // scadenza fisica automatica dopo 24 ore
-        await store.cmd(['SREM', 'races', m.id]);
-      }
+      else await endRace(m);
       return { race: pubMeta(m) };
+    }
+    if (sub === 'archive' && method === 'POST') {   // nuovo tentativo manuale di archiviazione
+      if (m.status !== 'ended') throw bad('La gara non è conclusa');
+      if (m.archive?.state !== 'done') await retryArchive(m);
+      return { archive: m.archive };
     }
     if (sub === 'passage' && method === 'POST') {  // checkpoint manuale
       const cp = m.checkpoints.find((c) => c.id === body?.checkpointId);
@@ -262,9 +266,89 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
     throw new HttpError(404, 'Non trovato');
   }
 
+  // ---------- chiusura e archiviazione ----------
+  // Riepilogo da portare su Neon: nessuna coordinata GPS, solo tempi e statistiche finali.
+  async function buildSummary(m) {
+    const course = await loadCourse(m.id);
+    const reads = await store.pipeline([['HGETALL', k.pass(m.id)], ...m.participants.map((p) => ['LRANGE', k.pos(m.id, p.id), 0, -1])]);
+    const pass = toObj(reads[0]);
+    const cps = m.checkpoints;           // già ordinati per km
+    return {
+      id: m.id, name: m.name, accountId: m.accountId ?? null, startedAt: m.startedAt, endedAt: m.endedAt,
+      totalKm: course?.totalKm ?? null,
+      course: m.accountId && course ? { name: course.name, points: course.points, totalKm: course.totalKm, gain: course.gain, loss: course.loss } : null,
+      expiresAt: m.accountId ? null : m.endedAt + ANON_REPORT_DAYS * DAY * 1000,
+      checkpoints: cps.map((c, i) => ({ idx: i, name: c.name, km: c.km, radius: c.radius })),
+      participants: m.participants.map((p, i) => {
+        const rows = reads[i + 1].map(decodePoint);
+        let stats = null;
+        if (course && rows.length) { stats = { ...runnerStats(course, rows, m.startedAt, m.endedAt), etaSec: null, etaAt: null }; }
+        const passages = cps.map((c, idx) => (pass[`${c.id}:${p.id}`] ? { cp: idx, t: Number(pass[`${c.id}:${p.id}`]) } : null)).filter(Boolean);
+        return { id: p.id, name: p.name, color: p.color, stats, passages };
+      }),
+    };
+  }
+
+  const sleep = (ms) => (ms > 0 ? new Promise((r) => setTimeout(r, ms)) : Promise.resolve());
+  // Più tentativi con pausa crescente. Lo stato resta nei dati della gara: 'done' | 'pending' | 'off'.
+  async function tryArchive(m) {
+    if (!archive.enabled) { m.archive = { state: 'off' }; return; }
+    const summary = await buildSummary(m);
+    const wait = Number(env.ARCHIVE_RETRY_MS ?? 300);
+    let err = '';
+    for (let i = 1; i <= 3; i++) {
+      try {
+        const r = await archive.saveRace(summary);
+        if (r.ok) { m.archive = { state: 'done', at: now(), attempts: (m.archive?.attempts ?? 0) + i }; return; }
+        err = 'verifica fallita';
+      } catch (e) { err = String(e?.message || e).slice(0, 120); }
+      console.log(JSON.stringify({ ev: 'archive-retry', race: m.id, attempt: i, err }));
+      await sleep(wait * i);
+    }
+    m.archive = { state: 'pending', attempts: (m.archive?.attempts ?? 0) + 3, lastError: err };
+  }
+
+  // Redis si svuota SOLO dopo la conferma su Neon; se l'archivio non conferma, i dati restano più a lungo per riprovare.
+  async function applyRetention(m) {
+    const left = Math.ceil((m.endedAt + KEEP_AFTER_END * 1000 - now()) / 1000);
+    const ttl = m.archive?.state === 'pending' ? SAFETY_TTL : Math.max(60, left);
+    await saveRace(m, ttl);
+    await expireRace(m, ttl);
+    await store.cmd([m.archive?.state === 'pending' ? 'SADD' : 'SREM', 'archq', m.id]);
+  }
+
+  async function endRace(m) {
+    m.status = 'ended'; m.endedAt = now();
+    await tryArchive(m);
+    await applyRetention(m);
+    await store.cmd(['SREM', 'races', m.id]);
+  }
+  async function retryArchive(m) { await tryArchive(m); await applyRetention(m); }
+
+  // Attività periodica (Vercel Cron, una volta al giorno): chiude le gare dimenticate, riprova le archiviazioni
+  // in sospeso e cancella dall'archivio i report scaduti.
+  async function cron(headers) {
+    if (!env.CRON_SECRET) throw new HttpError(503, 'Cron non configurato (CRON_SECRET)');
+    if (!safeEqual(bearer(headers), env.CRON_SECRET)) throw new HttpError(401, 'Non autorizzato');
+    const out = { autoEnded: 0, archived: 0, stillPending: 0, purged: 0 };
+    for (const id of await store.cmd(['SMEMBERS', 'races'])) {
+      const m = await getJSON(store, k.race(id));
+      if (!m) { await store.cmd(['SREM', 'races', id]); continue; }
+      if (m.status === 'live' && m.startedAt && now() - m.startedAt > AUTO_END_HOURS * 3600000) { await endRace(m); out.autoEnded++; }
+    }
+    for (const id of await store.cmd(['SMEMBERS', 'archq'])) {
+      const m = await getJSON(store, k.race(id));
+      if (!m || m.archive?.state !== 'pending') { await store.cmd(['SREM', 'archq', id]); continue; }
+      await retryArchive(m);
+      if (m.archive.state === 'done') out.archived++; else out.stillPending++;
+    }
+    if (archive.enabled) out.purged = await archive.purgeExpired(now());
+    return out;
+  }
+
   const pubParticipant = (p) => ({ id: p.id, name: p.name, color: p.color });
   const pubMeta = (m) => ({ id: m.id, name: m.name, status: m.status, createdAt: m.createdAt, startedAt: m.startedAt,
-    endedAt: m.endedAt, hasLink: !!m.viewHash, participants: m.participants.map(pubParticipant),
+    endedAt: m.endedAt, archive: m.archive?.state ?? null, hasLink: !!m.viewHash, participants: m.participants.map(pubParticipant),
     checkpoints: m.checkpoints.map(({ id, name, km, auto }) => ({ id, name, km, auto })) });
 
   // ---------- ricezione posizioni (app iOS) ----------
@@ -428,6 +512,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
+      if (route === 'cron/archive') return ok(await cron(h));
       if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));

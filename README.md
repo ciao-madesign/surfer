@@ -24,7 +24,7 @@ Il progetto è autonomo e fa parte della famiglia [WizTrail](https://github.com/
 |---|---|---|
 | API (una sola funzione Vercel) | `api/index.js`, `server/` | Node.js, nessuna dipendenza |
 | Dati in tempo reale | Upstash Redis | Posizioni, ultimo punto, link: scadenza automatica. In locale: memoria |
-| Dati permanenti (in arrivo) | Postgres su Neon, schema in `db/migrations/` | Profili, report di gara, storico leggero |
+| Archivio di fine gara | Postgres su Neon (`server/archive.js`, schema in `db/migrations/`) | Solo tempi, statistiche e checkpoint; la traccia del percorso solo per chi ha un profilo. Mai lo storico GPS |
 | Home e privacy | `public/index.html`, `public/privacy.html` | HTML statico |
 | Creazione e gestione gara | `public/crea.html`, `public/admin.html` | `/gestisci` per gli organizzatori, `/admin` per il gestore del servizio |
 | Pagina osservatori | `public/live.html`, `public/js/live.js` | MapLibre 2D/3D, profilo altimetrico, meteo |
@@ -37,6 +37,11 @@ Scelte di semplicità: nessun framework né bundler; risposte `live` in cache su
 - 5 corridori per gara, 30 checkpoint.
 - Massimo 5 gare create al giorno per indirizzo IP e 500 gare attive in tutto (configurabili con `CREATE_PER_DAY` e `MAX_ACTIVE_RACES`).
 - 120 punti per richiesta, 30 richieste al minuto per dispositivo.
+
+## Fine gara e archivio
+Alla chiusura (manuale, o automatica dopo 36 ore) il riepilogo passa su Neon in una sola transazione ripetibile, poi viene verificato. Redis si svuota entro 24 ore **solo dopo la conferma**: se Neon non risponde i dati restano più a lungo e si riprova (pulsante di nuovo tentativo e attività giornaliera `/api/cron/archive`). Senza profilo il report resta 3 giorni, poi viene cancellato. Lo storico GPS completo non lascia mai Redis. Senza `DATABASE_URL` l'archivio è spento e tutto scade dopo 24 ore.
+
+Variabili: `DATABASE_URL` (stringa di connessione Neon), `CRON_SECRET` (password lunga per l'attività giornaliera).
 
 ## Provarlo in locale
 
