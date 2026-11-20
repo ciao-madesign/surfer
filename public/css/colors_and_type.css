@@ -11,7 +11,7 @@
   --wt-card:    #121a22;   /* card surface */
   --wt-ink:     #e8f2ff;   /* primary text */
   --wt-muted:   #a8b3c2;   /* secondary text / captions */
-  --wt-faint:   #5a6b7f;   /* dim text, placeholders */
+  --wt-faint:   #7b8da3;   /* dim text, placeholders */
   --wt-border:  #2a394d;   /* dividers, input borders */
 
   /* ── Brand accent — teal ────────────────────────────────── */
@@ -98,7 +98,7 @@
   --wt-card:    #f7f9fc;
   --wt-ink:     #0a0f14;
   --wt-muted:   #5a6b7f;
-  --wt-faint:   #8a99ab;
+  --wt-faint:   #66768a;
   --wt-border:  #d0d8e3;
   --wt-teal:    #0ea5e9;      /* brighter cyan on light */
   --wt-teal-deep: #062827;

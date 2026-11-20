@@ -18,10 +18,11 @@ body.sharing{background:#050709}
 <h1>Il tuo tracciamento</h1>
 <section id="pair"><p class="muted">Incolla il codice ricevuto dall'organizzatore.</p>
 <textarea id="code" rows="3" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+<div class="small bad" id="perr" role="alert"></div>
 <div class="row" style="margin-top:8px"><button class="primary" id="link">Collega</button></div></section>
 
 <section id="run" hidden>
-  <div class="card"><b id="who"></b> <button id="unlink" class="small" style="float:right;min-height:32px">Cambia corridore</button>
+  <div class="card"><b id="who"></b> <button id="unlink" class="small"  style="float:right">Cambia corridore</button>
     <div class="state" id="state">Condivisione ferma</div></div>
   <div class="warn" id="hint">Tieni <b>lo schermo acceso</b> e questa pagina aperta. Se blocchi il telefono, la condivisione si ferma.</div>
   <button class="primary big" id="toggle">Avvia condivisione</button>

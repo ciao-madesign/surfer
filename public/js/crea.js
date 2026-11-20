@@ -2,8 +2,13 @@ import { parseGPXString } from './gpx-parser.js';
 
 const $ = (id) => document.getElementById(id);
 let course = null;
-const err = (t) => { const m = $('msg'); m.className = t ? 'err' : ''; m.textContent = t || ''; };
-const run = (fn) => async () => { err(''); try { await fn(); } catch (e) { err(e.message); } };
+const err = (t) => { const m = $('msg'); m.className = t ? 'err' : ''; m.textContent = t || ''; if (t) m.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+let busy = false;
+const run = (fn) => async () => {
+  if (busy) return; busy = true; err('');
+  const b = $('create'); b.disabled = true;
+  try { await fn(); } catch (e) { err(e.message); } finally { busy = false; b.disabled = false; }
+};
 
 $('gpx').onchange = run(async () => {
   const f = $('gpx').files[0]; if (!f) return;
@@ -37,5 +42,6 @@ $('create').onclick = run(async () => {
     body: JSON.stringify({ name: $('name').value, course: { name: course.name, points: course.points }, checkpoints: cps }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'Errore nella creazione');
+  busy = true; $('create').disabled = true;   // si passa alla pagina di gestione: niente secondo invio
   location.href = j.organizerPath;   // pagina di gestione: il link nell'indirizzo è la chiave della gara
 });

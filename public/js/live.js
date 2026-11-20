@@ -29,6 +29,7 @@ function fatal(title, msg) {
   $('fatal').style.display = 'block'; $('fatal-t').textContent = title; $('fatal-m').textContent = msg;
   for (const id of ['map', 'panel', 'ctl']) { const n = $(id); if (n) n.style.display = 'none'; }
 }
+const DUR = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
 function banner(msg) { const b = $('banner'); b.style.display = msg ? 'block' : 'none'; b.textContent = msg || ''; }
 
 // ---------- mappa ----------
@@ -70,15 +71,15 @@ function fit() {
   c.points.forEach((p) => b.extend([p[1], p[0]]));
   if (DEMO) {   // demo: un po' più vicino, per distinguere i corridori
     const cam = state.map.cameraForBounds(b, { padding: 30 });
-    if (cam) return state.map.easeTo({ center: cam.center, zoom: cam.zoom + 0.8, duration: 600 });
+    if (cam) return state.map.easeTo({ center: cam.center, zoom: cam.zoom + 0.8, duration: DUR });
   }
-  state.map.fitBounds(b, { padding: 40, duration: 600, pitch: state.is3d ? 60 : 0 });
+  state.map.fitBounds(b, { padding: 40, duration: DUR, pitch: state.is3d ? 60 : 0 });
 }
 function set3d(on) {
   state.is3d = on; $('b3d').textContent = on ? '2D' : '3D';
   const m = state.map;
-  if (on) { m.setTerrain({ source: 'dem', exaggeration: 1.3 }); m.easeTo({ pitch: 65, duration: 600 }); }
-  else { m.setTerrain(null); m.easeTo({ pitch: 0, bearing: 0, duration: 600 }); }
+  if (on) { m.setTerrain({ source: 'dem', exaggeration: 1.3 }); m.easeTo({ pitch: 65, duration: DUR }); }
+  else { m.setTerrain(null); m.easeTo({ pitch: 0, bearing: 0, duration: DUR }); }
 }
 $('b3d').onclick = () => state.ready && set3d(!state.is3d);
 $('bfit').onclick = () => state.ready && fit();
@@ -87,7 +88,7 @@ $('brun').onclick = () => {      // inquadra tutti i corridori (anche se lontani
   if (!state.ready || !pts.length) return;
   const b = new maplibregl.LngLatBounds();
   pts.forEach((p) => b.extend([p.last.lon, p.last.lat]));
-  state.map.fitBounds(b, { padding: 60, maxZoom: 15, duration: 600 });
+  state.map.fitBounds(b, { padding: 60, maxZoom: 15, duration: DUR });
 };
 $('bbase').onclick = () => {
   if (!state.ready) return;
@@ -143,7 +144,7 @@ function runnerCard(p, extra) {
   const card = el('div', { class: 'card runner' },
     el('div', {}, el('span', { class: 'dot', style: `background:${p.color}` }), el('span', { class: 'name' }, p.name),
       ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
-    el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `${fmtAge(p.last.ageSec)} · ${fmtTime(p.last.t)}` : 'nessun dato'),
+    el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `${fmtAge(p.last.ageSec)} · ${fmtTime(p.last.t)}` : 'in attesa del primo segnale'),
     p.offCourseM != null && p.offCourseM > 300
       ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): stime sospese`)
       : p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');

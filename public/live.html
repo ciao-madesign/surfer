@@ -18,7 +18,7 @@
   h1{font-size:1.1rem;margin:0;font-weight:600}
   #map{flex:1 1 45%;min-height:220px;position:relative}
   #ctl{position:absolute;top:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:6px}
-  #ctl button{min-height:36px;padding:4px 10px;background:rgba(10,15,20,.85)}
+  #ctl button{min-height:44px;padding:4px 10px;background:rgba(10,15,20,.85)}
   #panel{flex:1 1 55%;overflow:auto;padding:8px 12px calc(12px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
   #banner{display:none;background:var(--wt-warn);color:#1a1300;padding:6px 12px;font-size:var(--wt-size-small)}
   #fatal{display:none;padding:32px 20px;text-align:center}
@@ -45,7 +45,7 @@
 <body>
 <header><h1 id="title">Surfer · Live</h1><span class="small muted" id="updated"></span></header>
 <div id="demo" style="display:none;padding:8px 12px;background:var(--wt-teal-tint);border-bottom:1px solid var(--wt-border);font-size:var(--wt-size-small)">Gara di esempio con dati simulati, in versione accelerata (circa 8 minuti per un giro completo). <a href="/crea">Crea la tua gara</a></div>
-<div id="banner"></div>
+<div id="banner" role="status" aria-live="polite"></div>
 <div id="fatal"><h2 id="fatal-t"></h2><p class="muted" id="fatal-m"></p></div>
 <div id="map"><div id="ctl"><button id="b3d">3D</button><button id="bbase">Mappa</button><button id="bfit">Tutto il percorso</button><button id="brun">Dove sono</button></div></div>
 <div id="panel">

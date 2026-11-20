@@ -10,7 +10,8 @@ const load = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch 
 const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* spazio finito: si continua senza persistenza */ } };
 
 function parsePairing(s) {
-  const t = s.trim().replace(/-/g, '+').replace(/_/g, '/');
+  s = s.trim(); if (s.includes('#')) s = s.slice(s.lastIndexOf('#') + 1);   // accetta anche il link intero
+  const t = s.replace(/-/g, '+').replace(/_/g, '/');
   const j = JSON.parse(atob(t + '='.repeat((4 - (t.length % 4)) % 4)));
   if (!j.t || j.t.length < 20) throw new Error('Codice non valido');
   return { token: j.t, name: j.n || 'Corridore' };
@@ -22,11 +23,11 @@ function ui() {
   if (!pairing) return;
   $('who').textContent = pairing.name;
   const st = $('state');
-  st.textContent = !sharing ? 'Condivisione ferma' : document.hidden ? 'In pausa: pagina in secondo piano' : lastFix && Date.now() - lastFix.t > 90000 ? 'Segnale GPS assente' : 'Condivisione attiva';
+  st.textContent = !sharing ? (lastFix ? 'Condivisione ferma: la tua posizione non viene più inviata' : 'Condivisione ferma') : document.hidden ? 'In pausa: pagina in secondo piano' : lastFix && Date.now() - lastFix.t > 90000 ? 'Segnale GPS assente' : 'Condivisione attiva';
   st.className = 'state ' + (sharing && !document.hidden && !(lastFix && Date.now() - lastFix.t > 90000) ? 'ok' : sharing ? 'bad' : '');
   $('toggle').textContent = sharing ? 'Interrompi condivisione' : 'Avvia condivisione';
   $('toggle').className = 'big ' + (sharing ? 'danger' : 'primary');
-  $('last').textContent = lastFix ? fmtAgo(lastFix.t) : '–';
+  $('last').textContent = lastFix ? fmtAgo(lastFix.t) + (sharing ? '' : ' (non condiviso)') : '–';
   $('acc').textContent = lastFix ? `${Math.round(lastFix.acc)} m` : '–';
   $('queue').textContent = String(queue.length);
   $('sent').textContent = lastSentAt ? fmtAgo(lastSentAt) : '–';
@@ -34,11 +35,12 @@ function ui() {
   document.body.classList.toggle('sharing', sharing);
 }
 const showErr = (m) => { $('err').textContent = m || ''; };
+const showPairErr = (m) => { $('perr').textContent = m || ''; };
 
 // ---------- collegamento ----------
 $('link').onclick = () => {
-  try { pairing = parsePairing($('code').value); save(LS.pairing, pairing); $('code').value = ''; showErr(''); }
-  catch (e) { alert(e.message); }
+  try { pairing = parsePairing($('code').value); save(LS.pairing, pairing); $('code').value = ''; showPairErr(''); showErr(''); }
+  catch { showPairErr('Codice non valido. Incolla il link o il codice ricevuto dall\'organizzatore.'); }
   ui();
 };
 $('unlink').onclick = () => { if (sharing) stop(); pairing = null; localStorage.removeItem(LS.pairing); ui(); };

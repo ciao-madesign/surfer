@@ -16,7 +16,7 @@ function el(tag, props = {}, ...kids) {
   for (const c of kids.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(c));
   return e;
 }
-function msg(text, kind = 'ok') { const m = document.getElementById('msg'); m.className = text ? kind : ''; m.textContent = text || ''; if (text) setTimeout(() => (m.className = ''), 5000); }
+function msg(text, kind = 'ok') { const m = document.getElementById('msg'); m.className = text ? kind : ''; m.textContent = text || ''; if (text && kind === 'ok') setTimeout(() => { if (m.className === 'ok') m.className = ''; }, 5000); }
 async function api(method, path, body) {
   const r = await fetch(`/api/admin/${path}`, { method, headers: { 'content-type': 'application/json', 'x-org-token': org }, body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => ({}));
@@ -85,7 +85,7 @@ function sHow() {
       el('li', {}, 'Inquadra il QR con la fotocamera e apri il link nel browser.'),
       el('li', {}, 'Tocca «Avvia condivisione» e consenti la posizione.'),
       el('li', {}, ip ? 'Tieni lo schermo acceso e la pagina aperta.' : 'Tieni lo schermo acceso e disattiva il risparmio energetico.')),
-    el('p', { class: 'small muted' }, ip ? 'A schermo spento? Usa l\'app gratuita Overland (sotto).' : 'Per lo schermo spento, un\'app è in arrivo.'),
+    el('p', { class: 'small muted' }, ip ? 'A schermo spento? Usa l\'app gratuita Overland (sotto).' : 'Su Android, per ora, la pagina deve restare aperta e lo schermo acceso.'),
     el('p', { class: 'small' }, 'Quando compare «Segnale ricevuto ✓», funziona.'));
 }
 
@@ -103,9 +103,9 @@ function sConnect() {
         const j = await api('POST', `races/${race.id}/participants/${p.id}/token`, {});
         setSec((o) => { o[p.id] = { pairing: j.pairing, device: j.deviceToken }; }); await refresh();
       }) }, x ? 'Nuovo QR code' : 'Mostra QR code')),
+      x ? el('p', { class: 'small', style: 'margin-top:8px' }, 'Verifica che il corridore sia d\'accordo a condividere la posizione.') : '',
       x && platform === 'iphone' ? el('details', { class: 'small', style: 'margin-top:8px' }, el('summary', {}, 'Con l\'app Overland (anche a schermo spento)'),
         el('p', { class: 'muted' }, 'Scarica «Overland» dall\'App Store e inserisci questi dati.'),
-        el('p', { class: 'muted' }, 'Verifica che il corridore sia d\'accordo a condividere la posizione.'),
         el('div', { class: 'muted' }, 'Receiver Endpoint'), el('div', { class: 'secret' }, `${base}/api/device/overland`), el('button', { onclick: () => copy(`${base}/api/device/overland`) }, 'Copia indirizzo'),
         el('div', { class: 'muted', style: 'margin-top:8px' }, 'Access Token (personale)'), el('div', { class: 'secret' }, x.device), el('button', { onclick: () => copy(x.device) }, 'Copia token')) : '');
   });
@@ -152,12 +152,16 @@ function sReport() {
 }
 
 function sEnd() {
-  return el('section', { class: 'card' }, el('div', { class: 'row' },
-    race.status === 'live' ? el('button', { class: 'danger', onclick: run(async () => {
+  const end = race.status === 'live' ? el('section', { class: 'card' }, el('h2', {}, 'Fine della gara'),
+    el('p', { class: 'small muted' }, 'Le posizioni saranno cancellate dopo 24 ore e verrà preparato il report.'),
+    el('button', { class: 'danger', onclick: run(async () => {
       if (!confirm('Terminare la gara? Le posizioni saranno cancellate dopo 24 ore e verrà preparato il report.')) return;
-      await api('POST', `races/${race.id}/end`); await refresh(); }) }, 'Termina la gara') : '',
+      await api('POST', `races/${race.id}/end`); await refresh(); }) }, 'Termina la gara')) : '';
+  const del = el('section', { class: 'card', style: 'margin-top:32px' }, el('h2', {}, 'Elimina la gara'),
+    el('p', { class: 'small muted' }, 'Cancella subito la gara e tutti i dati. Non si può annullare.'),
     el('button', { class: 'danger', onclick: run(async () => { if (!confirm('Eliminare la gara e tutti i dati?')) return;
-      await api('DELETE', `races/${race.id}`); $app.replaceChildren(el('h1', {}, 'Gara eliminata'), el('p', { class: 'muted' }, 'Tutti i dati sono stati cancellati.'), el('a', { class: 'btn primary', href: '/crea' }, 'Crea una nuova gara')); }) }, 'Elimina la gara')));
+      await api('DELETE', `races/${race.id}`); $app.replaceChildren(el('h1', {}, 'Gara eliminata'), el('p', { class: 'muted' }, 'Tutti i dati sono stati cancellati.'), el('a', { class: 'btn primary', href: '/crea' }, 'Crea una nuova gara')); }) }, 'Elimina la gara'));
+  return el('div', {}, end, del);
 }
 
 // ---------- pagina ----------
