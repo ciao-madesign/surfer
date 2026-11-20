@@ -1,6 +1,8 @@
 User-agent: *
 Allow: /$
 Allow: /privacy
+Allow: /contatti
+Allow: /condizioni
 Disallow: /live
 Disallow: /gestisci
 Disallow: /admin

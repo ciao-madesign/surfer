@@ -23,7 +23,7 @@ function msg(title, text) {
 }
 
 function render(r) {
-  document.title = `Report · ${r.name} · Trail Live`;
+  document.title = `Report · ${r.name} · Surfer · Live`;
   const rep = buildReport(r);
   const out = [];
   out.push(el('div', { class: 'eyebrow' }, 'Report di gara'));

@@ -1,4 +1,4 @@
-# Trail Live
+# Surfer · Live
 
 Segui un corridore di trail su una mappa, in tempo reale, con un link privato. Gratuito, senza account e senza app per chi guarda. Pensato per famiglia e amici di chi corre.
 

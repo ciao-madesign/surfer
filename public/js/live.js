@@ -198,7 +198,7 @@ function every(fn, ms) { setInterval(() => { if (!document.hidden) fn(); }, ms);
   try { state.course = await api('course'); } catch (e) {
     return fatal(e.status === 410 ? 'Dati scaduti' : 'Link non valido', e.status === 410 ? 'Questa gara è conclusa e i dati sono stati cancellati.' : 'Il link è errato, revocato o scaduto.');
   }
-  document.title = `${state.course.name} · Trail Live`;
+  document.title = `${state.course.name} · Surfer · Live`;
   initMap(); drawProfile(); weather();
   await pollLive(); pollStats();
   every(pollLive, POLL_MS); every(pollStats, STATS_MS); setInterval(weather, 15 * 60000);
