@@ -2,7 +2,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 /* trama topografica leggera, come in WizTrail */
-html::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:url('/img/topo_texture_light.png');background-size:720px;opacity:.09;mix-blend-mode:screen}
+html::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:url('/img/topo_texture_light.png');background-size:720px;opacity:.09;mix-blend-mode:screen}
 body{background:var(--wt-bg);color:var(--wt-ink);font-family:var(--wt-font-sans);font-size:15px;-webkit-text-size-adjust:100%}
 a{color:var(--wt-teal)}
 button,input,select{font:inherit;color:inherit}
