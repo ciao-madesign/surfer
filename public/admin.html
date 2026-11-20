@@ -18,10 +18,11 @@
 <body><main>
 <h1>Organizzatore</h1>
 <div id="msg"></div>
+<p class="small muted" id="orgnote" hidden>Questo indirizzo è la chiave della tua gara: <b>salvalo tra i preferiti</b> e non condividerlo. Chi lo ha può modificare la gara.</p>
 <section class="card" id="login"><h2>Accesso</h2><label for="key">Chiave amministratore</label>
   <input id="key" type="password" autocomplete="current-password"><div class="row" style="margin-top:8px"><button class="primary" id="enter">Entra</button></div></section>
 <div id="app" hidden>
-  <section class="card"><h2>Nuova gara</h2>
+  <section class="card" id="newrace"><h2>Nuova gara</h2>
     <label for="name">Nome della gara</label><input id="name" maxlength="80">
     <label for="gpx">Traccia GPX</label><input id="gpx" type="file" accept=".gpx,application/gpx+xml">
     <div class="small muted" id="gpxinfo"></div>
