@@ -27,16 +27,16 @@
     {
       "source": "/crea",
       "destination": "/crea.html"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
     }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow, noarchive"
-        },
         {
           "key": "Referrer-Policy",
           "value": "no-referrer"
@@ -48,6 +48,15 @@
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
+        }
+      ]
+    },
+    {
+      "source": "/((?!privacy|site\\.css|img|css|fonts|logo-mark\\.svg|robots\\.txt|$).*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
         }
       ]
     }

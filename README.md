@@ -1,80 +1,79 @@
-# Private Trail Live Tracking
+# Trail Live
 
-Portale web per seguire in tempo reale fino a 5 corridori durante una gara di trail, con un link privato, senza account e senza installare app (per chi guarda). Specifica: V1.1 (6 novembre 2026).
+Segui un corridore di trail su una mappa, in tempo reale, con un link privato. Gratuito, senza account e senza app per chi guarda. Pensato per famiglia e amici di chi corre.
 
-Riusa asset di [WizTrail](https://github.com/ciao-madesign/WizTrail) (design system, font) e [Simule](https://github.com/ciao-madesign/Simule) (parser GPX, impostazione MapLibre).
+Ognuno può creare le proprie gare (percorso GPX, checkpoint, fino a 5 corridori) in pochi minuti e condividere il link.
 
-## Come è fatto
+Il progetto è autonomo e fa parte della famiglia [WizTrail](https://github.com/ciao-madesign/WizTrail): usa lo stesso design system, i font e il logo, e riusa il parser GPX di [Simule](https://github.com/ciao-madesign/Simule).
 
-| Parte | Cartella | Note |
+## Come funziona
+
+1. **Crea la gara** (`/crea`): carichi il GPX, scegli il nome e i checkpoint. Ricevi un indirizzo segreto per gestirla (`/gestisci#…`): va salvato tra i preferiti.
+2. **Aggiungi i corridori**: ognuno ottiene un codice per collegare il proprio telefono.
+3. **Condividi il link**: chi guarda apre `/live#…` da qualsiasi browser.
+4. A fine gara le posizioni vengono cancellate automaticamente dopo 24 ore.
+
+### Come il corridore invia la posizione
+- **Browser del telefono** (`/track`): nessuna installazione. Su iPhone serve lo schermo acceso.
+- **App Overland** (gratuita): invia anche a schermo spento. Endpoint `/api/device/overland`.
+- In arrivo: altre app gratuite (Traccar, OwnTracks, GPSLogger).
+
+## Architettura
+
+| Parte | Dove | Note |
 |---|---|---|
 | API (una sola funzione Vercel) | `api/index.js`, `server/` | Node.js, nessuna dipendenza |
-| Archivio | Upstash Redis (gratuito) | Le posizioni scadono da sole: nessun cron. In locale: memoria |
-| Portale osservatori | `public/live.html`, `public/js/live.js` | HTML+JS puro, MapLibre self-hosted |
-| Pagina organizzatore | `public/admin.html` | Crea gare, partecipanti, link |
-| Tracker web per il corridore | `public/track.html` | Safari, senza app né Xcode. Limite iOS: serve lo schermo acceso |
-| Compatibilità app Overland | `/api/device/overland` | Tracking a schermo spento con app gratuita dell'App Store, senza Xcode |
-| App iPhone (facoltativa) | `ios/TrailTrack/` | Swift/SwiftUI, richiede Xcode: non necessaria |
+| Dati in tempo reale | Upstash Redis | Posizioni, ultimo punto, link: scadenza automatica. In locale: memoria |
+| Dati permanenti (in arrivo) | Postgres su Neon, schema in `db/migrations/` | Profili, report di gara, storico leggero |
+| Home e privacy | `public/index.html`, `public/privacy.html` | HTML statico |
+| Creazione e gestione gara | `public/crea.html`, `public/admin.html` | `/gestisci` per gli organizzatori, `/admin` per il gestore del servizio |
+| Pagina osservatori | `public/live.html`, `public/js/live.js` | MapLibre 2D/3D, profilo altimetrico, meteo |
+| Tracker web | `public/track.html` | |
+| App iPhone (facoltativa) | `ios/TrailTrack/` | Swift, mai compilata, non necessaria |
 
-Scelte di semplicità: nessun framework né bundler (come WizTrail e Simule); Redis al posto di Neon (le scadenze a 24 ore sono native e non serve un cron, che su Vercel Hobby gira al massimo una volta al giorno); risposte `live` in cache di 5 secondi sulla CDN, così il numero di osservatori non aumenta le letture sul database.
+Scelte di semplicità: nessun framework né bundler; risposte `live` in cache sulla CDN per non far crescere le letture con il numero di osservatori; dati temporanei e dati permanenti tenuti separati, così il database permanente si può cambiare senza toccare il resto.
 
-## Provarlo in locale (2 minuti)
+## Limiti del servizio gratuito
+- 5 corridori per gara, 30 checkpoint.
+- Massimo 5 gare create al giorno per indirizzo IP e 500 gare attive in tutto (configurabili con `CREATE_PER_DAY` e `MAX_ACTIVE_RACES`).
+- 120 punti per richiesta, 30 richieste al minuto per dispositivo.
+
+## Provarlo in locale
 
 ```bash
-npm test          # 18 test automatici
-npm run dev       # ADMIN_KEY=dev, archivio in memoria
+npm test          # test automatici
+npm run dev       # ADMIN_KEY=dev, archivio in memoria, http://localhost:3000
 ```
-Apri http://localhost:3000/admin, chiave `dev`.
 
 ## Pubblicarlo (gratis)
 
-1. **Upstash**: puoi usare lo stesso database di WizTrail (il piano gratuito ne consente uno): le chiavi di questo progetto iniziano con `trail:`, quelle di WizTrail con `wiztrail:`, quindi non si mescolano. Copia `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN` dal database esistente.
-2. **Vercel**: importa questo repository (progetto separato da WizTrail) e imposta le variabili: `ADMIN_KEY` (una password lunga), `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`.
-3. Apri `https://<tuo-progetto>.vercel.app/admin`, entra con `ADMIN_KEY`.
-
-## Prima di una gara
-
-1. In `/admin`: carica il GPX, scrivi i checkpoint (`Nome @ km`), crea la gara.
-2. Aggiungi i corridori: per ognuno compare un **codice di collegamento** (visibile una volta). Incollalo nell'app sul suo iPhone.
-3. «Genera link» e invia il link ai familiari. «Avvia gara» alla partenza, «Termina gara» all'arrivo.
-4. Il link si può revocare o rigenerare in qualsiasi momento. Dopo «Termina gara» i dati vengono cancellati in 24 ore.
-
-## Come i corridori inviano la posizione (senza Xcode)
-
-1. **Tracker web** (`/track`): apri la pagina in Safari, incolla il codice di collegamento, avvia. Funziona finché lo **schermo resta acceso** e la pagina è aperta; blocco schermo o altra app in primo piano fermano il GPS (limite di iOS, non aggirabile da una pagina web). Il portale mostra allora «Connessione assente» con l'età dell'ultimo dato.
-2. **App Overland** (App Store, gratuita): invia la posizione anche con lo schermo spento. In `/admin`, dopo «Aggiungi» o «Nuovo codice», compaiono l'indirizzo (*Receiver Endpoint*) e il token (*Access Token*) da inserire in Overland, in due campi separati. La frequenza di invio la decide Overland: da verificare in prova.
-3. **App Swift** (`ios/`): solo se un giorno si avrà un Mac con Xcode.
-
-## App iPhone nativa (facoltativa)
-
-Vedi [`ios/README.md`](ios/README.md).
+1. **Upstash Redis**: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`. Le chiavi hanno il prefisso `trail:` (variabile `REDIS_PREFIX`), quindi il database può essere condiviso con altri progetti.
+2. **Vercel**: importa il repository e imposta `ADMIN_KEY` (password lunga) più le due variabili Upstash. Il ramo di produzione è `main`.
+3. Apri `/crea` per creare una gara, `/admin` con `ADMIN_KEY` per amministrare tutte le gare.
 
 ## Privacy e sicurezza
-
-- Il link è una credenziale: chi lo ha può vedere la gara. Nel link il token sta dopo `#`, quindi non compare nei log delle pagine né nei referrer. Le richieste ai dati lo includono però come parametro (serve per la cache di 5 secondi): può comparire nei log delle API su Vercel, visibili solo a te.
-- Credenziali del dispositivo, link degli osservatori e chiave amministratore sono tre cose distinte.
-- Il corridore attiva e interrompe la condivisione dall'app, con consenso esplicito; con «Interrompi» i punti non ancora inviati vengono cancellati.
-- Limiti: 5 partecipanti, 120 punti per richiesta, 30 richieste al minuto per dispositivo.
-- Le pagine non sono indicizzabili (`noindex`, `robots.txt`).
+- Il link è una credenziale: chi lo ha vede la gara. Il token sta dopo `#`, quindi non finisce nei log delle pagine né nei referrer.
+- Credenziale del corridore, link degli osservatori, indirizzo dell'organizzatore e chiave del gestore sono quattro cose distinte.
+- Dati personali ridotti al minimo: nome o pseudonimo, posizione durante il tracciamento, impronta dell'IP per un giorno.
+- Il corridore dà il consenso prima di iniziare e può interrompere in ogni momento. Per i minorenni serve un genitore.
+- Le pagine operative non sono indicizzabili; solo home e privacy lo sono.
+- Informativa in `/privacy`: è una bozza da far rivedere prima del lancio pubblico.
 
 ## Mappe e licenze (da verificare prima dell'uso pubblico)
+Le sorgenti sono in `public/js/config.js`.
+- **Esri World Imagery**: controllare le condizioni d'uso.
+- **OpenTopoMap**: uso leggero con attribuzione.
+- **Rilievo 3D**: Terrain Tiles aperti su AWS.
+- **Open-Meteo**: gratuito per uso non commerciale; è una stima di modello.
+- **Vercel Hobby**: solo uso non commerciale.
 
-Le sorgenti sono in `public/js/config.js` e si sostituiscono in un punto solo.
-- **Satellite Esri World Imagery** (come in Simule): controllare le condizioni d'uso per il tuo caso.
-- **OpenTopoMap**: uso leggero consentito con attribuzione; non adatto a traffico elevato.
-- **Rilievo 3D**: Terrain Tiles aperti su AWS (formato Terrarium).
-- **Meteo Open-Meteo**: gratuito solo per uso non commerciale. È la stima di un modello, non una misura sul posto.
-- **Vercel Hobby**: solo uso personale e non commerciale. Se il progetto diventasse uno spin-off a pagamento, serve un altro piano.
+## Stato
+- Provati con test automatici: API, gare multi-utente, link, scadenze, checkpoint, statistiche, limiti (24 test).
+- Provato sul campo: collegamento con Overland.
+- Da verificare: mappe e meteo in un browser reale, avanzamento e checkpoint su un percorso vero, frequenza di invio a schermo spento, carico con molti osservatori.
 
-## Stato di verifica (onestà)
+## Prossimi passi
+Rifinitura della creazione guidata, altre app di tracciamento, report di fine gara con tempi per settore e confronto tra partecipanti, profilo personale con chiave (senza registrazione) e con email, dashboard.
 
-| Cosa | Stato |
-|---|---|
-| API: gare, link, invio, checkpoint, statistiche, scadenza 24 h | Provato con 18 test automatici (archivio in memoria) |
-| Portale e pagina organizzatore | Provati in un browser di prova con dati simulati; **mappe e meteo non verificati**: il mio ambiente non raggiunge i server delle mappe |
-| Deploy su Vercel e Upstash reale | **Non provato**: la riscrittura `/api/*` → `api/index` e i comandi Redis reali vanno confermati al primo deploy |
-| App iOS | **Non compilata né provata** (nessun Xcode qui). Test T01–T06 della specifica da fare sul telefono |
-| Limiti dei piani gratuiti con 20 osservatori | Da misurare in una prova con più persone (test T15) |
-
-## Fuori dalla V1
-Classifiche e cronometraggio ufficiali, smartwatch, Android, frequenza cardiaca, account per gli osservatori, storico GPS permanente.
+## Fuori dalla versione attuale
+Cronometraggio ufficiale, smartwatch, frequenza cardiaca, storico GPS permanente.

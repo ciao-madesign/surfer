@@ -1,6 +1,6 @@
 # App TrailTrack (iPhone)
 
-Invia la posizione GPS al portale, anche con lo schermo spento. Frequenza adattiva: 15 s (corsa), 30 s (lento), 60 s (sosta). Senza rete i punti restano in coda sul telefono e partono al ritorno del segnale.
+Invia la posizione GPS a Trail Live, anche con lo schermo spento. Frequenza adattiva: 15 s (corsa), 30 s (lento), 60 s (sosta). Senza rete i punti restano in coda sul telefono e partono al ritorno del segnale.
 
 > **Non compilata né provata**: il codice è stato scritto senza Xcode. Se Xcode segnala errori, mandami il testo dell'errore e lo correggo.
 

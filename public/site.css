@@ -1,0 +1,29 @@
+/* Pagine pubbliche (home, privacy) */
+body{height:auto;line-height:var(--wt-lh-body)}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0}
+.brand{display:flex;align-items:center;gap:10px;color:var(--wt-ink);text-decoration:none;font-weight:600;font-size:1.1rem}
+.brand img{width:36px;height:36px;border-radius:9px}
+a.btn{display:inline-block;background:var(--wt-card);border:1px solid var(--wt-border);color:var(--wt-ink);border-radius:10px;padding:10px 16px;text-decoration:none;min-height:44px;line-height:24px}
+a.btn.primary{background:var(--wt-teal);border-color:var(--wt-teal);color:var(--wt-teal-deep);font-weight:600}
+.hero{padding:40px 0 32px;text-align:center}
+.eyebrow{text-transform:uppercase;letter-spacing:var(--wt-track-eyebrow);font-size:var(--wt-size-micro);color:var(--wt-teal)}
+.hero h1{font-size:var(--wt-size-display);line-height:var(--wt-lh-tight);margin:10px 0 14px}
+.hero p{font-size:1.1rem;color:var(--wt-muted);max-width:620px;margin:0 auto 22px}
+.hero .row{justify-content:center}
+section.block{padding:28px 0}
+section.block h2{font-size:var(--wt-size-h2);margin:0 0 16px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid .card{margin:0;padding:16px}
+.grid h3{margin:6px 0;font-size:1.05rem}
+.grid p{margin:0;color:var(--wt-muted)}
+.num{display:inline-flex;width:30px;height:30px;border-radius:50%;background:var(--wt-teal);color:var(--wt-teal-deep);font-weight:700;align-items:center;justify-content:center}
+details.faq{background:var(--wt-card);border:1px solid var(--wt-border);border-radius:12px;padding:12px 16px;margin:8px 0}
+details.faq summary{cursor:pointer;font-weight:600}
+details.faq p{color:var(--wt-muted);margin:8px 0 0}
+.cta{text-align:center;padding:36px 16px;background:var(--wt-teal-tint);border:1px solid var(--wt-border);border-radius:16px;margin:24px 0}
+footer.foot{border-top:1px solid var(--wt-border);padding:20px 0 32px;color:var(--wt-muted);font-size:var(--wt-size-small)}
+footer.foot .fam{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+footer.foot .fam img{width:28px;height:28px;border-radius:7px}
+footer.foot a{color:var(--wt-teal)}
+.prose{max-width:720px}.prose h2{margin-top:28px}.prose p,.prose li{color:var(--wt-muted)}
