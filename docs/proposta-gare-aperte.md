@@ -76,17 +76,47 @@ Ordini di grandezza, da verificare sui listini attuali:
 - **Invii dei corridori**: 200 corridori × 1 invio al minuto × 6 ore ≈ 70.000 invii, cioè qualche centinaio di migliaia di operazioni su Redis. Una sola gara così può consumare buona parte del piano gratuito mensile di Upstash. A consumo, il costo resta basso (indicativamente pochi euro a gara).
 - **Spettatori**: oggi la risposta `live` è in cache 5 secondi *per link*. Con un link per gruppo, 200 gruppi = 200 risposte diverse: il numero di spettatori pesa poco, il numero di gruppi molto. Soluzione: una sola «fotografia» della gara aggiornata ogni 10–15 secondi, da cui ogni link legge solo il proprio gruppo.
 - **Pannello organizzatore**: deve reggere 200 righe, con aggiornamento meno frequente.
-- **Vercel Hobby è per uso non commerciale**: se il servizio è offerto a gare con quota di iscrizione, quasi certamente serve il piano a pagamento.
+- **Vercel Hobby è per uso non commerciale**: pubblicità o accordi con gli organizzatori rendono il progetto commerciale anche se l'app resta gratuita. A quel punto serve il piano a pagamento oppure la migrazione (vedi sotto).
 
-In sintesi: «praticamente gratis» per l'utente sì; per chi gestisce il servizio, gratis fino a qualche decina di corridori, poi costi piccoli ma reali.
+In sintesi: per corridori, spettatori e organizzatori il servizio resta gratuito. Per chi lo gestisce è gratis fino a qualche decina di corridori, poi ci sono costi piccoli ma reali, da coprire con pubblicità o accordi.
 
-## Opzioni di prodotto
+## Modello: servizio gratuito
 
-1. **Tutto gratis con tetto** (es. 30 corridori): adatto a gare di paese, nessun costo da coprire.
-2. **Gratis fino a N, a pagamento oltre**: l'organizzatore paga una piccola cifra per gara grande. Copre i costi e il piano Vercel commerciale.
-3. **Sponsor/organizzatore paga, corridori gratis**: lo stesso modello di 2, venduto come servizio per la gara.
+L'app resta gratuita per tutti, senza piani a pagamento. Le entrate, se ci saranno, vengono da fuori:
 
-Consiglio: partire da 1 con un tetto basso, misurare costi reali su 2–3 gare, poi decidere.
+- **Pubblicità** sulla pagina degli spettatori, che è quella più vista. Va tenuta discreta: banner sotto la mappa, mai sopra. Niente pubblicità per i corridori né nel pannello dell'organizzatore. Attenzione: i circuiti pubblicitari usano cookie di profilazione, quindi serve il banner di consenso. In alternativa si possono usare sponsor diretti senza tracciamento, più semplici dal punto di vista della privacy.
+- **Accordi con gli organizzatori**: logo e sponsor della gara sulla mappa, link al sito della gara. L'organizzatore può portare i propri sponsor.
+- **Tetti tecnici, non commerciali**: un limite di corridori per gara serve solo a tenere sotto controllo i costi. Si alza man mano che le entrate lo permettono, oppure su accordo con l'organizzatore.
+
+## Migrazione fuori da Vercel (da valutare)
+
+La struttura attuale lo rende semplice: le API sono una sola funzione indipendente da Vercel, le pagine sono file statici e i dati stanno su Upstash e Neon, che restano dove sono.
+
+| Opzione | Pro | Contro |
+|---|---|---|
+| **Cloudflare (Pages + Workers)** | Piano gratuito generoso, uso commerciale ammesso, cache vicina agli spettatori | Ambiente diverso da Node, servono piccoli adattamenti |
+| **Netlify** | Molto simile a Vercel, migrazione rapida | Limiti gratuiti simili, da verificare |
+| **Piccolo server (VPS, pochi euro al mese)** | Costo fisso e prevedibile, nessun limite di richieste. È anche l'unica strada per i tracker GPS dedicati (vedi sotto) | Va tenuto aggiornato e monitorato |
+
+Consiglio: Cloudflare per pagine e API. Un piccolo server va aggiunto solo se si decide di supportare i tracker GPS dedicati.
+
+## Smartwatch e tracker GPS
+
+Oggi la posizione arriva solo dal telefono. Altri dispositivi risolverebbero i problemi principali: batteria, schermo spento e copertura.
+
+| Dispositivo | Come si collega | Fattibilità |
+|---|---|---|
+| **Garmin con inReach / Garmin Messenger** (satellitare) | Garmin pubblica una pagina «MapShare» con un indirizzo dati leggibile: il servizio la legge ogni pochi minuti | **Alta.** Funziona anche senza rete cellulare, ideale in montagna. Posizioni ogni 2–10 minuti |
+| **Altri satellitari** (SPOT, Zoleo) | Simile: indirizzo dati pubblico da leggere periodicamente | Media, da verificare caso per caso |
+| **Orologi Garmin** (senza satellitare) | Una piccola app per orologio (Connect IQ) che invia la posizione tramite il telefono abbinato | **Media.** Va sviluppata e pubblicata sullo store Garmin. Garmin LiveTrack non ha un accesso ufficiale per terzi |
+| **Apple Watch** | App nativa (c'è già una bozza per iPhone in `ios/`) | Media-bassa: serve sviluppo e pubblicazione su App Store |
+| **Wear OS (Android)** | App per orologio, oppure app generiche di tracking | Media |
+| **Coros, Suunto, Polar** | Nessun accesso pubblico alla posizione in tempo reale | **Bassa** per ora |
+| **Tracker GPS economici** (20–40 €, con SIM) | Parlano protocolli propri: serve un server sempre acceso che li riceva (es. Traccar) e inoltri le posizioni | Media: richiede il piccolo server. Utile per un organizzatore che vuole un kit di tracker da prestare |
+
+Consiglio, in ordine: 1) satellitari Garmin tramite MapShare (poco lavoro, grande valore in montagna); 2) app per orologi Garmin; 3) tracker economici, solo se si passa a un server proprio.
+
+Per il corridore cambia poco: in iscrizione sceglie «telefono», «orologio Garmin» o «satellitare» e segue le istruzioni dedicate.
 
 ## Percorso consigliato (a fasi)
 
@@ -106,11 +136,19 @@ Consiglio: partire da 1 con un tetto basso, misurare costi reali su 2–3 gare, 
 - Frequenza di invio adattiva in base al numero di corridori.
 - Mappa pubblica facoltativa con classifica per checkpoint.
 
-**Fase 4: extra**
+**Fase 4: dispositivi**
+- Satellitari Garmin via MapShare.
+- App per orologi Garmin.
+
+**Fase 5: extra**
 - Notifiche push, lista pettorali importata, vista allenatore con tempi intermedi della squadra.
+- Spazio sponsor della gara e pubblicità sulla pagina degli spettatori.
+- Eventuale migrazione (Cloudflare) e piccolo server per i tracker economici.
 
 ## Domande aperte
 - Tetto iniziale di corridori per gara aperta: 30? 50?
+- Pubblicità con circuito esterno o solo sponsor diretti?
+- Quando migrare: prima di introdurre la pubblicità?
 - Email obbligatoria, facoltativa o assente?
 - Gara pubblica (mappa con tutti) da subito o solo più avanti?
 - Chi è titolare dei dati: va deciso con un professionista prima del lancio.
