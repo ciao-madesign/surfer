@@ -32,3 +32,4 @@ Traccar, OwnTracks, GPSLogger (oltre a browser e Overland), con una breve guida 
 
 ## Fuori dalla versione attuale
 Cronometraggio ufficiale, smartwatch, frequenza cardiaca, storico GPS permanente.
+- Trama di sfondo (`public/css/app.css`, opacity): ora 9%, da confermare prima del go-live.
