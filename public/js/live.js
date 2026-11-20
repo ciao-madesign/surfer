@@ -139,8 +139,8 @@ function runnerCard(p, extra) {
     el('div', {}, el('span', { class: 'dot', style: `background:${p.color}` }), el('span', { class: 'name' }, p.name),
       ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
     el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `${fmtAge(p.last.ageSec)} · ${fmtTime(p.last.t)}` : 'nessun dato'),
-    p.offCourseM != null && p.offCourseM > 1000
-      ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km`)
+    p.offCourseM != null && p.offCourseM > 300
+      ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): tempi e stime sospesi`)
       : p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');
   if (st) {
     card.append(el('div', { class: 'stats', style: 'grid-column:1/3' },

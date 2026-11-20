@@ -83,8 +83,8 @@ test('invio idempotente e recupero dopo perdita di rete (fuori ordine)', async (
   const r = await race(api);
   await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
   const base = clock.now();
-  clock.advance(300000);
-  const batch = [pt(base + 60000, 1), pt(base + 20000, 0.3), pt(base + 40000, 0.7)];
+  clock.advance(900000);
+  const batch = [pt(base + 600000, 1), pt(base + 200000, 0.3), pt(base + 400000, 0.7)];
   assert.equal((await send(api, r.dev, batch)).json.accepted, 3);
   const again = await send(api, r.dev, batch);
   assert.equal(again.json.accepted, 0);
@@ -232,10 +232,11 @@ test('codice dispositivo smarrito: il nuovo sostituisce il vecchio, i dati resta
   const r = await race(api);
   await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
   await send(api, r.dev, [pt(clock.now(), 1)]);
+  clock.advance(300000);
   const n = await api('POST', `/api/admin/races/${r.id}/participants/${r.pid}/token`, {}, ADMIN);
   assert.equal(n.status, 200);
-  assert.equal((await send(api, r.dev, [pt(clock.now() + 1000, 1.2)])).status, 401, 'il vecchio codice non vale più');
-  assert.equal((await send(api, n.json.deviceToken, [pt(clock.now() + 2000, 1.4)])).status, 200);
+  assert.equal((await send(api, r.dev, [pt(clock.now() - 100000, 1.2)])).status, 401, 'il vecchio codice non vale più');
+  assert.equal((await send(api, n.json.deviceToken, [pt(clock.now(), 1.4)])).status, 200);
   const live = await api('GET', '/api/live', null, {}, { t: r.view });
   assert.equal(live.json.participants.length, 1);
   assert.ok(live.json.participants[0].distKm >= 1.3);
@@ -250,16 +251,18 @@ test('Overland: lotti GeoJSON accettati (token in indirizzo o intestazione)', as
   const iso = (ms) => new Date(ms).toISOString();
   const f = (ms, km, p = {}) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [8, at(km)[0]] },
     properties: { timestamp: iso(ms), altitude: 1100, horizontal_accuracy: 6, speed: 2, ...p } });
-  const body = { locations: [f(clock.now() - 20000, 1), f(clock.now() - 10000, 1.1),
+  const t0 = clock.now();
+  clock.advance(700000);
+  const body = { locations: [f(t0 + 100000, 1), f(t0 + 200000, 1.1),
     { type: 'Feature', properties: { type: 'trip' } },                       // elementi non-posizione: ignorati
-    f(clock.now() - 5000, 1.2, { horizontal_accuracy: -1 }),                  // precisione non valida -> nulla
+    f(t0 + 250000, 1.2, { horizontal_accuracy: -1 }),                         // precisione non valida -> nulla
     f(clock.now() + 99999999, 1.3)] };                                        // dal futuro: scartato
   const ok = await api('POST', '/api/device/overland', body, {}, { token: r.dev });
   assert.equal(ok.status, 200);
   assert.deepEqual(ok.json, { result: 'ok' });
-  const ok2 = await api('POST', '/api/device/overland', { locations: [f(clock.now(), 1.4)] }, { authorization: `Bearer ${r.dev}` });
+  const ok2 = await api('POST', '/api/device/overland', { locations: [f(t0 + 400000, 1.4)] }, { authorization: `Bearer ${r.dev}` });
   assert.equal(ok2.status, 200);
-  const raw = await api('POST', '/api/device/overland', { locations: [f(clock.now() + 1000, 1.5)] }, { Authorization: r.dev });  // token senza "Bearer"
+  const raw = await api('POST', '/api/device/overland', { locations: [f(t0 + 500000, 1.5)] }, { Authorization: r.dev });  // token senza "Bearer"
   assert.equal(raw.status, 200);
   const live = await api('GET', '/api/live', null, {}, { t: r.view });
   assert.ok(Math.abs(live.json.participants[0].distKm - 1.5) < 0.05);
@@ -321,4 +324,55 @@ test('creazione pubblica: limite giornaliero per IP e tetto globale', async () =
   const c = (ip) => h({ method: 'POST', path: '/api/races', body: { name: 'G' }, headers: { 'x-forwarded-for': ip } });
   assert.equal((await c('1.2.3.4')).status, 200);
   assert.equal((await c('1.2.3.5')).status, 503);
+});
+
+test('GPS: punti lontani dal percorso non fanno avanzare la progressiva', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const base = clock.now();
+  clock.advance(1200000);
+  await send(api, r.dev, [pt(base + 60000, 2)]);
+  // 150 km a est: non è sul percorso
+  // (i primi salti sono scartati; poi la nuova posizione viene accettata ma resta fuori percorso)
+  const farPts = [0, 1, 2, 3, 4].map((i) => ({ t: base + 400000 + i * 30000, lat: at(8)[0], lon: 9.8, ele: 1000, acc: 5 }));
+  const far = await send(api, r.dev, farPts);
+  assert.ok(far.json.accepted >= 1);
+  const live = (await api('GET', '/api/live', null, {}, { t: r.view })).json.participants[0];
+  assert.ok(Math.abs(live.distKm - 2) < 0.05, `progressiva ferma a 2 km, non ${live.distKm}`);
+  assert.ok(live.offCourseM > 100000);
+});
+
+test('GPS: deviazione lenta oltre 300 m dal percorso non fa avanzare i km', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const base = clock.now();
+  clock.advance(1200000);
+  await send(api, r.dev, [pt(base + 60000, 3)]);
+  // 600 m a est del km 5, camminando piano: ~1,1 km/10 min verso il km 4
+  const side = (i, km) => ({ t: base + 200000 + i * 60000, lat: at(km)[0], lon: 8.0068, ele: 1000, acc: 8 });
+  await send(api, r.dev, [side(0, 3.2), side(1, 3.4), side(2, 3.6)]);
+  const live = (await api('GET', '/api/live', null, {}, { t: r.view })).json.participants[0];
+  assert.ok(live.distKm < 3.1, `progressiva ferma, non ${live.distKm}`);
+  assert.ok(live.offCourseM > 300);
+});
+
+test('GPS: salti impossibili e precisione pessima vengono scartati', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const base = clock.now();
+  clock.advance(1200000);
+  await send(api, r.dev, [pt(base + 60000, 1)]);
+  // 4 km in 20 s (200 m/s) e un punto con precisione di 400 m
+  const res = await send(api, r.dev, [pt(base + 80000, 5), pt(base + 100000, 1.1, { acc: 400 })]);
+  assert.equal(res.json.accepted, 0);
+  assert.equal(res.json.rejected, 2);
+  const live = (await api('GET', '/api/live', null, {}, { t: r.view })).json.participants[0];
+  assert.ok(Math.abs(live.distKm - 1) < 0.05);
+  // dopo tre salti consecutivi la nuova posizione viene accettata (recupero dopo un trasferimento reale)
+  await send(api, r.dev, [pt(base + 120000, 5), pt(base + 140000, 5.01), pt(base + 160000, 5.02)]);
+  const r4 = await send(api, r.dev, [pt(base + 180000, 5.03)]);
+  assert.equal(r4.json.accepted, 1);
 });

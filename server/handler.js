@@ -10,6 +10,11 @@ const MAX_PARTICIPANTS = 5;
 const MAX_HISTORY = 4000;
 const MAX_BATCH = 120;
 const RATE_PER_MIN = 30;
+const MAX_ACC = 150;        // m: precisione peggiore accettata
+const MAX_SPEED = 12;       // m/s: oltre, un salto di posizione è considerato anomalo
+const MAX_ANOM = 3;         // salti consecutivi scartati prima di fidarsi della nuova posizione
+const OFF_COURSE_M = 300;   // m: oltre, il punto non fa avanzare la progressiva sul percorso
+const MAX_PROG_ANOM = 5;    // avanzamenti irreali consecutivi prima di accettarli
 const COLORS = ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa'];
 const STATUS_LABEL = { waiting: 'In attesa', tracking: 'Tracking attivo', paused: 'In pausa',
   no_gps: 'Segnale GPS assente', offline: 'Connessione assente', finished: 'Gara conclusa' };
@@ -299,8 +304,26 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
 
     const rows = [], writes = [];
     let km = last?.km ?? 0, fin = !!last?.fin, lastPt = last, off = last?.off ?? null;
+    let anom = last?.anom ?? 0, progAnom = last?.panom ?? 0, rejected = 0;
     for (const p of fresh) {
-      if (course) { const pr = project(course, p.lat, p.lon, km); km = Math.max(km, pr.km); off = Math.round(pr.offM); }
+      // 1) campioni inutilizzabili: precisione pessima, oppure salto di posizione impossibile
+      if (p.acc != null && p.acc > MAX_ACC) { rejected++; continue; }
+      if (lastPt?.t != null) {
+        const d = haversine(lastPt.lat, lastPt.lon, p.lat, p.lon);
+        if (d > 100 && d / Math.max(1, (p.t - lastPt.t) / 1000) > MAX_SPEED && anom < MAX_ANOM) { anom++; rejected++; continue; }
+      }
+      anom = 0;
+      // 2) avanzamento sul percorso: solo se il punto è vicino alla traccia e il salto è plausibile
+      if (course) {
+        const pr = project(course, p.lat, p.lon, km);
+        off = Math.round(pr.offM);
+        if (pr.offM <= OFF_COURSE_M) {
+          const dt = last?.t != null && lastPt?.t != null ? (p.t - lastPt.t) / 1000 : null;
+          const maxJump = dt == null ? Infinity : 0.4 + (dt * MAX_SPEED) / 1000;
+          if (pr.km - km <= maxJump || progAnom >= MAX_PROG_ANOM) { km = Math.max(km, pr.km); progAnom = 0; }
+          else progAnom++;
+        }
+      }
       rows.push(encodePoint(p, km));
       lastPt = { t: p.t, lat: p.lat, lon: p.lon, ele: p.ele, acc: p.acc, km };
       if (course && km >= course.totalKm - 0.05) fin = true;
@@ -317,13 +340,13 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
         }
       }
     }
-    const rec = { ...(lastPt || { t: null }), status, rcv: t, fin, off, n: (last?.n ?? 0) + rows.length };
+    const rec = { ...(lastPt || { t: null }), status, rcv: t, fin, off, anom, panom: progAnom, n: (last?.n ?? 0) + rows.length };
     const ops = [['HSET', k.last(m.id), ref.pid, JSON.stringify(rec)], ['EXPIRE', k.last(m.id), SAFETY_TTL], ...writes];
     if (rows.length) ops.push(['RPUSH', k.pos(m.id, ref.pid), ...rows], ['LTRIM', k.pos(m.id, ref.pid), -MAX_HISTORY, -1],
       ['EXPIRE', k.pos(m.id, ref.pid), SAFETY_TTL]);
     await store.pipeline(ops);
-    console.log(JSON.stringify({ ev: 'ingest', race: m.id, p: ref.pid, got: pts.length, new: rows.length, st: status }));
-    return { ok: true, accepted: rows.length, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
+    console.log(JSON.stringify({ ev: 'ingest', race: m.id, p: ref.pid, got: pts.length, new: rows.length, rej: rejected, st: status }));
+    return { ok: true, accepted: rows.length, rejected, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
   }
   // App "Overland" (iOS, App Store, gratuita): invia lotti GeoJSON a un indirizzo. Il token del dispositivo
   // può stare nell'indirizzo (?token=) o nell'intestazione Authorization. Risposta attesa: {"result":"ok"}.
@@ -392,7 +415,10 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
 
   // ---------- smistamento ----------
   const NOCACHE = { 'Cache-Control': 'no-store' };
-  const cache = (s, swr) => ({ 'Cache-Control': `public, s-maxage=${s}, stale-while-revalidate=${swr}` });
+  // La CDN usa l'URL completo (token compreso) come chiave: solo chi ha il link riceve la risposta in cache.
+// Niente "stale-while-revalidate": dopo una revoca nessuno riceve dati vecchi oltre la durata indicata.
+const cache = (s) => ({ 'Cache-Control': `public, s-maxage=${s}, max-age=0` });
+const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
 
   return async function handle({ method = 'GET', path = '/', query = {}, headers = {}, body = null, origin = '' }) {
     try {
@@ -406,9 +432,9 @@ export function createHandler({ store, env = process.env, now = Date.now }) {
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));
       if (route === 'device/overland' && method === 'POST') return ok(await overland(h, query, body));
-      if (method === 'GET' && route === 'live') return ok(await live(query, h), cache(5, 10));
-      if (method === 'GET' && route === 'course') return ok(await courseRoute(query, h), cache(60, 120));
-      if (method === 'GET' && route === 'stats') return ok(await stats(query, h), cache(15, 30));
+      if (method === 'GET' && route === 'live') return ok(await live(query, h), cache(5));
+      if (method === 'GET' && route === 'course') return ok(await courseRoute(query, h), privateCache(60));
+      if (method === 'GET' && route === 'stats') return ok(await stats(query, h), cache(15));
       throw new HttpError(404, 'Non trovato');
     } catch (e) {
       if (e instanceof HttpError) return { status: e.status, headers: NOCACHE, json: { error: e.message } };
