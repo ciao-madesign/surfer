@@ -36,6 +36,10 @@
   .wx{flex:1;min-width:140px;background:var(--wt-panel);border-radius:8px;padding:8px}
   table{width:100%;border-collapse:collapse;font-size:var(--wt-size-small)}
   td,th{text-align:left;padding:3px 4px;border-bottom:1px solid var(--wt-border)}
+  /* demo nella cornice del telefono: meno scritte */
+  body.demo.framed header,body.demo.framed #ctl,body.demo #ctl,body.demo .stats,body.demo table,body.demo #weatherCard,body.demo #note,body.demo #profile-info{display:none!important}
+  body.demo #map{flex-basis:62%}
+  body.demo .pin{width:34px;height:34px;font-size:15px}
 </style>
 </head>
 <body>
@@ -48,9 +52,9 @@
   <div class="card"><svg id="profile" role="img" aria-label="Profilo altimetrico"></svg>
     <div class="small muted" id="profile-info"></div></div>
   <div id="runners"></div>
-  <div class="card"><b>Meteo</b> <span class="small muted">stima del modello Open-Meteo, non una misura sul posto</span>
+  <div class="card" id="weatherCard"><b>Meteo</b> <span class="small muted">stima del modello Open-Meteo, non una misura sul posto</span>
     <div id="weather"></div></div>
-  <p class="small muted">Posizioni indicative, aggiornate a intervalli. Mostrano l'ultimo punto ricevuto e la sua età. I tempi non sostituiscono il cronometraggio ufficiale.</p>
+  <p class="small muted" id="note">Posizioni indicative, aggiornate a intervalli. Mostrano l'ultimo punto ricevuto e la sua età. I tempi non sostituiscono il cronometraggio ufficiale.</p>
 </div>
 <script src="/lib/maplibre/maplibre-gl.js"></script>
 <script type="module" src="/js/live.js"></script>

@@ -68,6 +68,10 @@ function fit() {
   const c = state.course.course; if (!c) return;
   const b = new maplibregl.LngLatBounds();
   c.points.forEach((p) => b.extend([p[1], p[0]]));
+  if (DEMO) {   // demo: un po' più vicino, per distinguere i corridori
+    const cam = state.map.cameraForBounds(b, { padding: 30 });
+    if (cam) return state.map.easeTo({ center: cam.center, zoom: cam.zoom + 0.8, duration: 600 });
+  }
   state.map.fitBounds(b, { padding: 40, duration: 600, pitch: state.is3d ? 60 : 0 });
 }
 function set3d(on) {
@@ -195,7 +199,9 @@ async function pollStats() { try { state.stats = await api('stats'); renderLive(
 function every(fn, ms) { setInterval(() => { if (!document.hidden) fn(); }, ms); }
 
 if (DEMO) {
-  const d = $('demo'); d.style.display = 'block';
+  document.body.classList.add('demo');
+  let framed = false; try { framed = window.self !== window.top; } catch { framed = true; }
+  if (framed) document.body.classList.add('framed'); else $('demo').style.display = 'block';
 }
 (async function start() {
   if (token.length < 20) return fatal('Link non valido', 'Apri il link completo che ti ha inviato l\'organizzatore.');

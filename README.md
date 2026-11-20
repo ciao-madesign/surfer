@@ -73,12 +73,13 @@ Le sorgenti sono in `public/js/config.js`.
 - **Vercel Hobby**: solo uso non commerciale.
 
 ## Stato
-- Provati con test automatici: API, gare multi-utente, link, scadenze, checkpoint, statistiche, limiti (24 test).
+- Provati con test automatici: API, gare multi-utente, link, scadenze, checkpoint, statistiche, filtri GPS, archivio, report, demo (40 test).
+- Pubblicati: landing (`/`), demo (`/demo`), creazione (`/crea`), gestione (`/gestisci`), report (`/report`), privacy e condizioni (bozze).
 - Provato sul campo: collegamento con Overland.
-- Da verificare: mappe e meteo in un browser reale, avanzamento e checkpoint su un percorso vero, frequenza di invio a schermo spento, carico con molti osservatori.
+- Da verificare: archivio su Neon con una gara vera, mappe e meteo in un browser reale, foto della landing su telefono e computer, frequenza di invio a schermo spento, carico con molti osservatori.
 
 ## Prossimi passi
-Rifinitura della creazione guidata, altre app di tracciamento, report di fine gara con tempi per settore e confronto tra partecipanti, profilo personale con chiave (senza registrazione) e con email, dashboard.
+Vedi [`ROADMAP.md`](ROADMAP.md): rifinitura dei testi, creazione guidata con QR code e istruzioni per iPhone e Android, altre app di tracciamento, profilo personale, dashboard.
 
 ## Fuori dalla versione attuale
 Cronometraggio ufficiale, smartwatch, frequenza cardiaca, storico GPS permanente.
