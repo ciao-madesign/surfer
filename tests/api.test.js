@@ -530,3 +530,14 @@ test('gara di esempio: dati simulati coerenti, senza credenziali né scritture',
   assert.equal(st.json.participants.length, 3);
   assert.equal((await store.cmd(['SMEMBERS', 'races'])).length, 0, 'la demo non crea nulla nell\'archivio');
 });
+
+test('input malformati: 400 e non 500', async () => {
+  const { api } = setup();
+  const r = await race(api);
+  assert.equal((await send(api, r.dev, [null])).status, 400);
+  assert.equal((await send(api, r.dev, ['x'])).status, 400);
+  const bad = await api('POST', '/api/admin/races', { name: 'x', course: { points: COURSE }, checkpoints: [null] }, ADMIN);
+  assert.equal(bad.status, 400);
+  const pa = await api('POST', `/api/admin/races/${r.id}/passage`, { checkpointId: 'c1', participantId: r.pid, t: 'ieri' }, ADMIN);
+  assert.equal(pa.status, 400);
+});

@@ -33,6 +33,9 @@ Traccar, OwnTracks, GPSLogger (oltre a browser e Overland), con una breve guida 
 ## 5b. Audit di UX, flussi e privacy/consensi
 Audit più profondo dopo i testi: percorsi completi (organizzatore, corridore, chi segue), gestione dei consensi (browser e Overland, minorenni), informative, tempi di conservazione, messaggi di errore e casi limite.
 
+## 5b-bis. Decisione mappe
+Si tengono Esri World Imagery e OpenTopoMap con attribuzione (decisione di novembre 2026). Da rivalutare prima di aprire a molti utenti: condizioni Esri fuori da ArcGIS e carico su OpenTopoMap non verificati.
+
 ## 5c. Prima di un eventuale uso commerciale
 Oggi Surfer è gratuito e senza scopo di lucro (lo dicono le condizioni). Prima di qualsiasi uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe (Esri, OpenTopoMap) e aggiornare condizioni e privacy.
 

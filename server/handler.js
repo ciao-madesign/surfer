@@ -126,6 +126,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     }
     const cps = Array.isArray(body.checkpoints) ? body.checkpoints : [];
     if (cps.length > 30) throw bad('Massimo 30 checkpoint');
+    if (!cps.every((c) => c && typeof c === 'object')) throw bad('Checkpoint non valido');
     if (cps.length && !course) throw bad('Servono la traccia GPX per i checkpoint');
     meta.checkpoints = cps.map((c, i) => {
       const lat = num(c.lat, -90, 90, 'lat checkpoint'), lon = num(c.lon, -180, 180, 'lon checkpoint');
@@ -259,7 +260,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       const cp = m.checkpoints.find((c) => c.id === body?.checkpointId);
       const p = m.participants.find((x) => x.id === body?.participantId);
       if (!cp || !p) throw new HttpError(404, 'Checkpoint o partecipante non trovato');
-      const t = Number(body.t) || now();
+      const t = body.t == null ? now() : num(body.t, now() - 7 * DAY * 1000, now() + 120000, 't');
       await store.cmd(['HSET', k.pass(m.id), `${cp.id}:${p.id}`, String(t)]);
       await store.cmd(['EXPIRE', k.pass(m.id), SAFETY_TTL]);
       return { ok: true, t };
@@ -388,6 +389,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const status = ['tracking', 'paused', 'no_gps'].includes(body?.status) ? body.status : 'tracking';
     const raw = Array.isArray(body?.points) ? body.points : [];
     if (raw.length > MAX_BATCH) throw bad(`Massimo ${MAX_BATCH} punti per richiesta`);
+    if (!raw.every((p) => p && typeof p === 'object')) throw bad('Punto non valido');
 
     const t = now();
     const pts = raw.map((p) => ({
