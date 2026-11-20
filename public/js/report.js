@@ -32,7 +32,7 @@ function render(r) {
     r.startedAt ? el('span', { class: 'chip' }, fmtDate(r.startedAt)) : null,
     el('span', { class: 'chip' }, 'Distanza ', el('b', {}, km1(r.totalKm))),
     r.meta?.gain != null ? el('span', { class: 'chip' }, 'D+ ', el('b', {}, `${r.meta.gain} m`)) : null,
-    el('span', { class: 'chip' }, 'Partecipanti ', el('b', {}, String(r.participants.length)))));
+    el('span', { class: 'chip' }, 'Corridori ', el('b', {}, String(r.participants.length)))));
 
   // classifica
   out.push(el('h2', {}, 'Classifica'));
@@ -60,11 +60,11 @@ function render(r) {
               el('div', { class: 's' }, `${fmtPace(c.paceSecKm)} /km · ${c.kmh.toFixed(1).replace('.', ',')} km/h`),
               rep.comparable ? el('div', { class: 'd' }, c.deltaSec === 0 ? 'migliore' : `+${fmtDur(c.deltaSec)}`) : null))
           : el('td', { class: 'none' }, '–'))))))));
-    if (rep.comparable) out.push(el('p', { class: 'legend' }, el('span'), 'Miglior tempo del settore. I distacchi sono rispetto al più veloce.'));
+    if (rep.comparable) out.push(el('p', { class: 'legend' }, el('span'), 'In viola il miglior tempo di ogni settore. I distacchi sono dal più veloce.'));
   }
 
   // schede
-  out.push(el('h2', {}, 'Corridori'));
+  out.push(el('h2', {}, 'Schede'));
   out.push(el('div', { class: 'cards' }, ...rep.rows.map((x) => el('div', { class: 'card' },
     el('span', { class: 'who' }, el('i', { style: `background:${x.color || '#999'}` }), x.name),
     el('dl', {},
@@ -75,8 +75,8 @@ function render(r) {
         .flatMap(([a, b]) => [el('dt', {}, a), el('dd', {}, b)]))))));
 
   $('out').replaceChildren(...out);
-  $('foot').textContent = (r.expiresAt ? `Report disponibile fino al ${fmtDay(r.expiresAt)}. ` : '')
-    + 'Tempi e passi sono stime ricavate dal GPS dei telefoni e non sostituiscono il cronometraggio ufficiale.';
+  $('foot').textContent = (r.expiresAt ? `Disponibile fino al ${fmtDay(r.expiresAt)}. ` : '')
+    + 'Tempi e passi sono stime dal GPS dei telefoni: non sono cronometraggio ufficiale.';
 }
 
 async function load() {
@@ -89,6 +89,6 @@ async function load() {
     if (res.status === 404) return msg('Report non trovato', 'Potrebbe essere scaduto o non ancora pronto. Riprova tra qualche minuto.');
     if (!res.ok) return msg('Link non valido', j.error || 'Il link non è corretto.');
     render(j);
-  } catch { msg('Connessione assente', 'Riprova tra poco.'); }
+  } catch { msg('Nessuna connessione', 'Riprova tra poco.'); }
 }
 load();
