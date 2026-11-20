@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Surfer · Live · Crea la tua gara</title>
+<title>Surfer · Live · Crea gara</title>
 <link rel="icon" href="/logo-mark.svg">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/colors_and_type.css">
@@ -15,19 +15,19 @@
 input[type=number]{width:90px}</style>
 </head>
 <body><main>
-<h1>Crea la tua gara</h1>
-<p class="muted">In tre passi: carichi il percorso, aggiungi i corridori e mandi il link ai familiari. Nessun account.</p>
+<h1>Crea gara</h1>
+<p class="muted">Carica il percorso, poi collega i telefoni e condividi il link. Nessun account.</p>
 <div id="msg"></div>
 <section class="card">
-  <h2>1 · Il percorso</h2>
-  <label for="gpx">File del percorso (GPX)</label><input id="gpx" type="file" accept=".gpx,application/gpx+xml">
+  <h2>Il percorso</h2>
+  <label for="gpx">File GPX</label><input id="gpx" type="file" accept=".gpx,application/gpx+xml">
   <div class="small muted" id="gpxinfo"></div>
   <label for="name">Nome della gara</label><input id="name" maxlength="80" placeholder="Es. Trail del Monte Rosa">
-  <label for="every">Checkpoint automatici ogni <input id="every" type="number" min="0" max="50" value="10"> km (0 = nessuno)</label>
-  <label for="cps">Checkpoint personalizzati (facoltativo, uno per riga: «Nome @ km», es. «Ristoro @ 12.5»)</label>
+  <label for="every">Checkpoint ogni <input id="every" type="number" min="0" max="50" value="10"> km (0 = nessuno)</label>
+  <label for="cps">Altri checkpoint (facoltativo). Uno per riga: «Nome @ km», ad esempio «Ristoro @ 12.5»</label>
   <textarea id="cps" rows="3" style="width:100%;background:var(--wt-panel);color:inherit;border:1px solid var(--wt-border);border-radius:8px;padding:8px"></textarea>
-  <div class="row" style="margin-top:12px"><button class="primary" id="create">Crea la gara</button></div>
+  <div class="row" style="margin-top:12px"><button class="primary" id="create">Crea gara</button></div>
 </section>
-<p class="small muted">Creando la gara accetti che i dati di posizione siano usati solo per mostrarla ai familiari e siano cancellati 24 ore dopo la fine.</p>
+<p class="small muted">Creando la gara accetti che le posizioni servano solo a mostrarla a chi ha il link e siano cancellate 24 ore dopo la fine. <a href="/privacy">Informativa</a></p>
 <script type="module" src="/js/crea.js"></script>
 </main></body></html>

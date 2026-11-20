@@ -12,7 +12,7 @@ $('gpx').onchange = run(async () => {
   const sel = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
   course = { points: sel.map((p) => [p.lat, p.lon, Math.round(p.ele)]), dist: sel.map((p) => p.dist_from_start / 1000), name: f.name.replace(/\.gpx$/i, '') };
   if (!$('name').value) $('name').value = course.name;
-  $('gpxinfo').textContent = `Percorso di ${course.dist.at(-1).toFixed(1)} km caricato.`;
+  $('gpxinfo').textContent = `${course.dist.at(-1).toFixed(1)} km caricati ✓`;
 });
 
 function kmToCoord(km) {
