@@ -149,7 +149,7 @@ function runnerCard(p, extra) {
       : p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');
   if (st) {
     card.append(el('div', { class: 'stats', style: 'grid-column:1/3' },
-      kpi('Quota', `${st.ele} m`), kpi('Dislivello + / −', `${st.gain} / ${st.loss} m`),
+      kpi('Quota', `${st.ele} m`), kpi('D+ / D−', `${st.gain} / ${st.loss} m`),
       kpi('Tempo', fmtDur(st.elapsedSec)), kpi('Velocità media', st.avgSpeedKmh != null ? `${st.avgSpeedKmh} km/h` : '–'),
       kpi('Passo medio', fmtPace(st.avgPaceSecKm)), kpi('Ultimi 10 min', fmtPace(st.recentPaceSecKm)),
       kpi('Salita', fmtPace(st.paceByGrade.salita)), kpi('Piano', fmtPace(st.paceByGrade.piano)), kpi('Discesa', fmtPace(st.paceByGrade.discesa)),

@@ -68,7 +68,7 @@ function render(r) {
   out.push(el('div', { class: 'cards' }, ...rep.rows.map((x) => el('div', { class: 'card' },
     el('span', { class: 'who' }, el('i', { style: `background:${x.color || '#999'}` }), x.name),
     el('dl', {},
-      ...[['Distanza', km1(x.distKm)], ['Dislivello +', x.gain != null ? `${x.gain} m` : '–'], ['Dislivello −', x.loss != null ? `${x.loss} m` : '–'],
+      ...[['Distanza', km1(x.distKm)], ['D+', x.gain != null ? `${x.gain} m` : '–'], ['D−', x.loss != null ? `${x.loss} m` : '–'],
         ['Passo in salita', x.paceByGrade?.salita ? `${fmtPace(x.paceByGrade.salita)} /km` : '–'],
         ['Passo in piano', x.paceByGrade?.piano ? `${fmtPace(x.paceByGrade.piano)} /km` : '–'],
         ['Passo in discesa', x.paceByGrade?.discesa ? `${fmtPace(x.paceByGrade.discesa)} /km` : '–']]
