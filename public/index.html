@@ -3,73 +3,102 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Surfer · Live · Segui i tuoi cari in gara, in diretta</title>
-<meta name="description" content="Segui in tempo reale un corridore di trail su una mappa, con un link privato. Gratis, senza account e senza app per chi guarda.">
+<title>Surfer · Live · Segui una gara in diretta, da casa</title>
+<meta name="description" content="Un link privato mostra su una mappa dove si trova chi corre, quando passa ai checkpoint e quando arriverà. Gratis, senza account e senza app per chi guarda.">
 <meta name="robots" content="index,follow">
+<meta property="og:title" content="Surfer · Live">
+<meta property="og:description" content="Segui una gara in diretta, da casa. Gratis, senza account.">
 <link rel="icon" href="/logo-mark.svg">
+<link rel="preconnect" href="https://images.unsplash.com" crossorigin>
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/colors_and_type.css">
 <link rel="stylesheet" href="/css/app.css">
 <link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/landing.css">
 </head>
 <body>
-<div class="wrap">
+<div class="page">
   <header class="top">
     <a class="brand" href="/"><img src="/img/wiztrail-logo.png" alt="" width="36" height="36">Surfer · Live</a>
-    <a class="btn primary" href="/crea">Crea la tua gara</a>
+    <div class="nav"><a class="link" href="/demo">Guarda un esempio</a><a class="btn primary" href="/crea">Crea la tua gara</a></div>
   </header>
 
   <section class="hero">
-    <div class="eyebrow">Per chi corre e per chi aspetta</div>
-    <h1>Segui i tuoi cari<br>durante la gara</h1>
-    <p>Dove si trova adesso, quanto manca, quando arriva al prossimo ristoro. Un link privato da mandare a famiglia e amici: niente account, niente app da installare per chi guarda.</p>
-    <div class="row">
-      <a class="btn primary" href="/crea">Crea la tua gara, gratis</a>
-      <a class="btn" href="#come-funziona">Come funziona</a>
+    <div>
+      <div class="eyebrow">Surfer · Live</div>
+      <h1>Segui una gara in diretta, da casa.</h1>
+      <p class="lead">Un link privato mostra su una mappa dove si trova chi corre, quando passa ai checkpoint e quando arriverà.</p>
+      <div class="actions"><a class="btn primary lg" href="/crea">Crea la tua gara</a><a class="btn ghost lg" href="/demo">Guarda un esempio</a></div>
+      <p class="note">Gratis. Senza account. Senza app per chi guarda.</p>
     </div>
-    <p class="small muted" style="margin-top:14px">Hai già ricevuto un link? Aprilo direttamente: non serve altro.</p>
+    <div class="phone" aria-label="Anteprima: una gara di esempio in corso">
+      <div class="screen"><iframe src="/demo" title="Gara di esempio in corso" loading="lazy"></iframe></div>
+    </div>
   </section>
 
-  <section class="block" id="come-funziona">
+  <div class="band"><img src="https://images.unsplash.com/photo-1741983139985-7fff27fffc3f?auto=format&fit=crop&w=1800&q=72" srcset="https://images.unsplash.com/photo-1741983139985-7fff27fffc3f?auto=format&fit=crop&w=900&q=72 900w, https://images.unsplash.com/photo-1741983139985-7fff27fffc3f?auto=format&fit=crop&w=1800&q=72 1800w" sizes="(max-width:860px) 100vw, 900px" alt="Montagne e nuvole al tramonto" loading="lazy"><p>Sapere dov'è, senza dover chiamare.</p></div>
+
+  <section class="sec" id="come-funziona">
     <h2>Come funziona</h2>
-    <div class="grid">
-      <div class="card"><span class="num">1</span><h3>Carichi il percorso</h3><p>Scegli il file GPX della gara e dai un nome. I checkpoint vengono proposti in automatico.</p></div>
-      <div class="card"><span class="num">2</span><h3>Aggiungi i corridori</h3><p>Fino a 5 persone. Ognuna riceve un codice da inserire sul proprio telefono per iniziare il tracciamento.</p></div>
-      <div class="card"><span class="num">3</span><h3>Condividi il link</h3><p>Chi ti sta a cuore apre il link e vede mappa, posizione, passaggi e tempi stimati.</p></div>
+    <div class="steps">
+      <div class="step"><span class="n">01</span><h3>Carichi il percorso</h3><p>Scegli il file GPX della gara e dai un nome. I checkpoint li proponiamo noi.</p></div>
+      <div class="step"><span class="n">02</span><h3>Chi corre avvia il tracciamento</h3><p>Dal browser del telefono o con un'app gratuita. Serve solo un codice.</p></div>
+      <div class="step"><span class="n">03</span><h3>Condividi il link</h3><p>Chi ti sta a cuore lo apre da qualsiasi telefono o computer.</p></div>
     </div>
   </section>
 
-  <section class="block">
-    <h2>Pensato per essere semplice</h2>
-    <div class="grid">
-      <div class="card"><h3>Gratis</h3><p>Nessun costo e nessuna registrazione per creare una gara.</p></div>
-      <div class="card"><h3>Privato</h3><p>Solo chi ha il link vede la gara. Puoi revocarlo o rigenerarlo quando vuoi.</p></div>
-      <div class="card"><h3>Senza app per chi guarda</h3><p>Si apre dal browser, su telefono o computer.</p></div>
-      <div class="card"><h3>Dati che non restano</h3><p>Le posizioni vengono cancellate 24 ore dopo la fine della gara.</p></div>
-      <div class="card"><h3>Mappa 2D e 3D</h3><p>Percorso, profilo altimetrico, checkpoint, meteo e andamento di ogni corridore.</p></div>
-      <div class="card"><h3>Con il telefono che hai</h3><p>Il corridore usa il browser del telefono oppure l'app gratuita Overland.</p></div>
+  <section class="sec split">
+    <img src="https://images.unsplash.com/photo-1553231291-d4a1ac0c04b4?auto=format&fit=crop&w=1400&q=72" srcset="https://images.unsplash.com/photo-1553231291-d4a1ac0c04b4?auto=format&fit=crop&w=700&q=72 700w, https://images.unsplash.com/photo-1553231291-d4a1ac0c04b4?auto=format&fit=crop&w=1400&q=72 1400w" sizes="(max-width:860px) 100vw, 700px" alt="Una persona guarda lo smartphone" loading="lazy">
+    <div>
+      <h2>Cosa vede chi aspetta</h2>
+      <div class="list">
+        <div><b>La posizione sulla mappa</b><span>Aggiornata in diretta, in 2D, in 3D o in vista satellitare.</span></div>
+        <div><b>I passaggi ai checkpoint</b><span>Con l'orario di ognuno.</span></div>
+        <div><b>L'arrivo stimato</b><span>Un'indicazione, non una promessa.</span></div>
+        <div><b>Lo stato</b><span>In movimento, fermo o senza segnale.</span></div>
+        <div><b>Il meteo</b><span>Quello del luogo della gara.</span></div>
+      </div>
     </div>
   </section>
 
-  <section class="block">
+  <section class="sec center">
+    <h2>Per chi aspetta. E per quando arriva.</h2>
+    <div class="pair"><img src="https://images.unsplash.com/photo-1774557936786-354c31734285?auto=format&fit=crop&w=1400&q=72" srcset="https://images.unsplash.com/photo-1774557936786-354c31734285?auto=format&fit=crop&w=700&q=72 700w, https://images.unsplash.com/photo-1774557936786-354c31734285?auto=format&fit=crop&w=1400&q=72 1400w" sizes="(max-width:860px) 100vw, 700px" alt="Il pubblico fa il tifo ai corridori" loading="lazy"><img src="https://images.unsplash.com/photo-1674574124340-c00cc2dae99c?auto=format&fit=crop&w=1400&q=72" srcset="https://images.unsplash.com/photo-1674574124340-c00cc2dae99c?auto=format&fit=crop&w=700&q=72 700w, https://images.unsplash.com/photo-1674574124340-c00cc2dae99c?auto=format&fit=crop&w=1400&q=72 1400w" sizes="(max-width:860px) 100vw, 700px" alt="Un abbraccio" loading="lazy"></div>
+  </section>
+
+  <section class="sec">
+    <h2>Pochi dati, per poco tempo.</h2>
+    <div class="trio">
+      <div><b>Nessun account</b><span>Per creare una gara o seguirla non serve registrarsi.</span></div>
+      <div><b>Un link riservato</b><span>Solo chi lo riceve vede la gara. Puoi revocarlo quando vuoi.</span></div>
+      <div><b>Cancellazione automatica</b><span>Le posizioni vengono eliminate 24 ore dopo la fine.</span></div>
+    </div>
+    <a class="more" href="/privacy">Leggi l'informativa</a>
+  </section>
+
+  <section class="sec">
     <h2>Domande frequenti</h2>
-    <details class="faq"><summary>Serve un account?</summary><p>No. Chi crea la gara riceve un indirizzo segreto per gestirla: va salvato tra i preferiti. Chi guarda usa solo il link che riceve.</p></details>
-    <details class="faq"><summary>Cosa deve fare il corridore?</summary><p>Aprire la pagina di collegamento sul telefono, inserire il proprio codice e lasciare il tracciamento attivo. Per un tracciamento affidabile a schermo spento si consiglia l'app gratuita Overland, spiegata passo per passo nella pagina di gestione.</p></details>
-    <details class="faq"><summary>Quanto è precisa la posizione?</summary><p>Dipende dal segnale GPS e dalla copertura di rete. Tempi e stime sono indicativi e non sostituiscono il cronometraggio ufficiale.</p></details>
-    <details class="faq"><summary>Che dati vengono conservati?</summary><p>Posizione e nome del corridore, solo per mostrare la gara ai familiari. Vengono cancellati automaticamente 24 ore dopo la fine. Dettagli nella <a href="/privacy">informativa privacy</a>.</p></details>
-    <details class="faq"><summary>Ci sono limiti?</summary><p>Per mantenere il servizio gratuito: massimo 5 corridori per gara e un numero limitato di gare create al giorno.</p></details>
-    <details class="faq"><summary>È sicuro in caso di emergenza?</summary><p>No: è un servizio di cortesia per i familiari, non un sistema di soccorso. Per sicurezza in montagna usa sempre i canali ufficiali.</p></details>
+    <div class="faq">
+      <details class="q"><summary>Cosa deve fare chi corre?</summary><p>Aprire una pagina sul telefono, inserire il proprio codice e lasciare il tracciamento attivo. Per un tracciamento stabile a schermo spento consigliamo l'app gratuita Overland: la pagina di gestione spiega i passaggi.</p></details>
+      <details class="q"><summary>Quanto è precisa la posizione?</summary><p>Dipende dal segnale GPS e dalla rete. Tempi e stime sono indicativi e non sostituiscono il cronometraggio ufficiale.</p></details>
+      <details class="q"><summary>Quanta batteria consuma?</summary><p>Il tracciamento usa il GPS in modo continuo: per gare lunghe conviene partire con il telefono carico e, se possibile, portare una batteria esterna.</p></details>
+      <details class="q"><summary>Quanti corridori si possono seguire?</summary><p>Fino a cinque per ogni gara.</p></details>
+      <details class="q"><summary>Costa qualcosa?</summary><p>No. È gratuito.</p></details>
+      <details class="q"><summary>È un sistema di sicurezza?</summary><p>No. È un servizio di cortesia per chi segue da casa. In caso di pericolo contatta i servizi di emergenza.</p></details>
+    </div>
   </section>
 
-  <div class="cta">
-    <h2 style="margin:0 0 8px">Pronto per la prossima gara?</h2>
-    <p class="muted" style="margin:0 0 16px">Ci vogliono pochi minuti.</p>
-    <a class="btn primary" href="/crea">Crea la tua gara</a>
+  <div class="final">
+    <img src="https://images.unsplash.com/photo-1560354892-75d8f5d0b5e9?auto=format&fit=crop&w=1800&q=72" srcset="https://images.unsplash.com/photo-1560354892-75d8f5d0b5e9?auto=format&fit=crop&w=900&q=72 900w, https://images.unsplash.com/photo-1560354892-75d8f5d0b5e9?auto=format&fit=crop&w=1800&q=72 1800w" sizes="(max-width:860px) 100vw, 900px" alt="Una corridrice su un prato in quota" loading="lazy">
+    <div><h2>Pronto per la prossima gara?</h2><p>Bastano pochi minuti.</p><a class="btn primary lg" href="/crea">Crea la tua gara</a></div>
   </div>
 
   <footer class="foot">
-    <div class="fam"><img src="/img/wiztrail-logo.png" alt="" width="28" height="28"><span>Fa parte della famiglia <a href="https://ciao-madesign.github.io/WizTrail/">WizTrail</a>, gli strumenti per chi corre in montagna.</span></div>
-    <div><a href="/privacy">Privacy</a> · <a href="/condizioni">Condizioni</a> · <a href="mailto:cia.madesign@gmail.com">Contatti</a></div>
+    <div class="row2">
+      <p class="fam"><img src="/img/wiztrail-logo.png" alt="" width="36" height="36"><span>Surfer fa parte della famiglia <a href="https://ciao-madesign.github.io/WizTrail/">WizTrail</a>, gli strumenti per chi corre in montagna.</span></p>
+      <nav><a href="/privacy">Privacy</a><a href="/condizioni">Condizioni</a><a href="mailto:cia.madesign@gmail.com">Contatti</a></nav>
+    </div>
+    <p class="credits">Foto su <a href="https://unsplash.com">Unsplash</a>: Micah &amp; Sammie Chaffin, Lucas Canino, Brian Erickson, Leviosa Hou, Susan G. Komen 3-Day, Mikail McVerry.</p>
   </footer>
 </div>
 </body>
