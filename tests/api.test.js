@@ -12,7 +12,7 @@ function setup() {
   let t = Date.parse('2026-11-14T08:00:00Z');
   const clock = { now: () => t, advance: (ms) => { t += ms; } };
   const store = createStore({}, clock.now);
-  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto' }, now: clock.now });
+  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto', REPORT_SECRET: 'segreto-report' }, now: clock.now });
   const api = async (method, path, body, headers = {}, query = {}) =>
     handle({ method, path, body, headers, query, origin: 'https://x.test' });
   return { clock, store, api };
@@ -384,7 +384,7 @@ function setupArchive(extra = {}, archive = memoryArchive()) {
   let t = Date.parse('2026-11-14T08:00:00Z');
   const clock = { now: () => t, advance: (ms) => { t += ms; } };
   const store = createStore({}, clock.now);
-  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto', ARCHIVE_RETRY_MS: '0', CRON_SECRET: 'cron', ...extra }, now: clock.now, archive });
+  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto', ARCHIVE_RETRY_MS: '0', CRON_SECRET: 'cron', REPORT_SECRET: 'segreto-report', ...extra }, now: clock.now, archive });
   const api = async (method, path, body, headers = {}, query = {}) => handle({ method, path, body, headers, query, origin: 'https://x.test' });
   return { clock, store, api, archive };
 }
@@ -540,4 +540,11 @@ test('input malformati: 400 e non 500', async () => {
   assert.equal(bad.status, 400);
   const pa = await api('POST', `/api/admin/races/${r.id}/passage`, { checkpointId: 'c1', participantId: r.pid, t: 'ieri' }, ADMIN);
   assert.equal(pa.status, 400);
+});
+
+test('report: senza REPORT_SECRET dedicato i report sono disattivati (non usa la chiave admin)', async () => {
+  const store = createStore({});
+  const h = createHandler({ store, env: { ADMIN_KEY: 'segreto' } });
+  const r = await h({ method: 'GET', path: '/api/report', headers: {}, query: { t: 'x.y' }, origin: 'https://x.test' });
+  assert.equal(r.status, 401);
 });

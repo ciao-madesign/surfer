@@ -53,7 +53,7 @@ npm run dev       # ADMIN_KEY=dev, archivio in memoria, http://localhost:3000
 ## Pubblicarlo (gratis)
 
 1. **Upstash Redis**: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`. Le chiavi hanno il prefisso `trail:` (variabile `REDIS_PREFIX`), quindi il database può essere condiviso con altri progetti.
-2. **Vercel**: importa il repository e imposta `ADMIN_KEY` (password lunga) più le due variabili Upstash. Il ramo di produzione è `main`.
+2. **Vercel**: importa il repository e imposta `ADMIN_KEY` e `REPORT_SECRET` (due password lunghe diverse) più le variabili Upstash e Neon. Il ramo di produzione è `main`.
 3. Apri `/crea` per creare una gara, `/admin` con `ADMIN_KEY` per amministrare tutte le gare.
 
 ## Privacy e sicurezza

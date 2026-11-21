@@ -352,7 +352,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   // ---------- report di gara ----------
   // Il collegamento al report si ricava dall'id della gara con una firma segreta: non serve salvarlo e resta
   // sempre lo stesso. Chi lo ha può leggere il report finché l'archivio lo conserva.
-  const reportSecret = env.REPORT_SECRET || env.ADMIN_KEY || '';
+  const reportSecret = env.REPORT_SECRET || '';   // dedicato: senza, i report restano disattivati
   const reportToken = (id) => `${id}.${hmac(reportSecret, `report:${id}`).slice(0, 32)}`;
   const reportPath = (m) => (reportSecret && m.status === 'ended' && m.archive?.state === 'done' ? `/report#${reportToken(m.id)}` : null);
 
