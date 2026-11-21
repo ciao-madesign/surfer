@@ -15,6 +15,7 @@ const MAX_HISTORY = 9000;     // punti per corridore: copre le 36 ore di una gar
 const STALE_MS = 180000;      // senza segnale oltre 3 minuti: stato «senza connessione» e stima d'arrivo sospesa
 const MAX_BATCH = 120;
 const RATE_PER_MIN = 30;
+const IP_PER_MIN = 120;       // richieste al minuto per rete (gli accessi con credenziali sbagliate ne valgono 6)
 const ANON_REPORT_DAYS = 3;  // gare senza profilo: tempi e statistiche restano 3 giorni
 const AUTO_END_HOURS = 36;   // chiusura automatica di una gara dimenticata aperta
 const MAX_ACC = 150;        // m: precisione peggiore accettata
@@ -87,7 +88,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   const bearer = (headers) => (headers.authorization || '').replace(/^Bearer\s+/i, '');
 
   async function viewer(query, headers) {
-    const t = query.t || headers['x-view-token'];
+    const t = query.t;   // solo nell'indirizzo: la CDN usa l'URL come chiave di cache
     if (!t || t.length < 20) throw new HttpError(401, 'Link non valido');
     const raceId = await store.cmd(['GET', k.view(sha256(t))]);
     if (!raceId) throw new HttpError(401, 'Link non valido, revocato o scaduto');
@@ -154,11 +155,21 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       ...(orgToken ? { organizerToken: orgToken, organizerPath: `/gestisci#${orgToken}` } : {}) };
   }
 
-  // creazione pubblica: limiti per indirizzo IP (salvato solo come hash, 1 giorno) e tetto globale
+  // Rete del visitatore: per IPv6 conta il blocco /64 (un utente può cambiare l'ultima parte dell'indirizzo a piacere).
+  // Si conserva solo un hash con sale che cambia ogni giorno: non permette di collegare giorni diversi.
+  function ipId(headers) {
+    let ip = String(headers['x-forwarded-for'] || headers['x-real-ip'] || 'local').split(',')[0].trim();
+    if (ip.includes(':')) {
+      const [a, b] = ip.split('::'), A = a ? a.split(':') : [], B = b ? b.split(':') : [];
+      ip = [...A, ...Array(Math.max(0, 8 - A.length - B.length)).fill('0'), ...B].slice(0, 4).map((x) => x.padStart(4, '0')).join(':');
+    }
+    return hmac(`${env.ADMIN_KEY || ''}:${Math.floor(now() / 86400000)}`, ip).slice(0, 16);
+  }
+
+  // creazione pubblica: limiti per rete (solo hash con sale giornaliero, 1 giorno) e tetto globale
   async function publicCreate(headers, body) {
-    const ip = String(headers['x-forwarded-for'] || headers['x-real-ip'] || 'local').split(',')[0].trim();
     const day = Math.floor(now() / 86400000);
-    const key = `rc:${sha256(ip).slice(0, 16)}:${day}`;
+    const key = `rc:${ipId(headers)}:${day}`;
     const [n] = await store.pipeline([['INCR', key], ['EXPIRE', key, 2 * DAY]]);
     if (n > (Number(env.CREATE_PER_DAY) || 5)) throw new HttpError(429, 'Troppe gare create oggi: riprova domani');
     const active = await store.cmd(['SMEMBERS', 'races']);
@@ -237,7 +248,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     }
     if (sub === 'participants' && method === 'POST' && parts.length === 3) {
       if (m.participants.length >= MAX_PARTICIPANTS) throw bad('Massimo 5 partecipanti');
-      const dev = token(24), pid = `p${m.participants.length + 1}${shortId().slice(0, 3)}`;
+      const dev = token(24), pid = `p${m.participants.length + 1}${shortId().slice(0, 6)}`;
       const p = { id: pid, name: text(body?.name, 40, 'Nome'),
         color: /^#[0-9a-f]{6}$/i.test(body?.color || '') ? body.color : COLORS[m.participants.length % 5],
         deviceHash: sha256(dev) };
@@ -429,7 +440,8 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const ref = await getJSON(store, k.dev(sha256(dev)));
     if (!ref) { console.log(JSON.stringify({ ev: 'ingest-denied', why: 'unknown-token' })); throw new HttpError(401, 'Dispositivo non autorizzato'); }
     const minute = Math.floor(now() / 60000);
-    const [count] = await store.pipeline([['INCR', `rl:${ref.pid}:${minute}`], ['EXPIRE', `rl:${ref.pid}:${minute}`, 90]]);
+    const rlKey = `rl:${ref.raceId}:${ref.pid}:${minute}`;   // per gara e corridore
+    const [count] = await store.pipeline([['INCR', rlKey], ['EXPIRE', rlKey, 90]]);
     if (count > RATE_PER_MIN) throw new HttpError(429, 'Troppe richieste');
 
     const m = await loadRace(ref.raceId);
@@ -598,12 +610,21 @@ const cache = (s) => ({ 'Cache-Control': `public, s-maxage=${s}, max-age=0` });
 const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
 
   return async function handle({ method = 'GET', path = '/', query = {}, headers = {}, body = null, origin = '' }) {
+    let ipk = null;
     try {
       const parts = path.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
       if (parts[0] === 'api') parts.shift();
       const h = Object.fromEntries(Object.entries(headers).map(([a, b]) => [a.toLowerCase(), b]));
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
+      // la CDN usa l'URL come chiave di cache: parametri in più servirebbero solo a saltarla
+      if (method === 'GET' && ['live', 'course', 'stats', 'report'].includes(route) && Object.keys(query).some((x) => x !== 't')) throw bad('Richiesta non valida');
+      if (route !== 'health' && route !== 'cron/archive' && !route.startsWith('demo/')) {
+        ipk = `rl:ip:${ipId(h)}:${Math.floor(now() / 60000)}`;
+        const n = await store.cmd(['INCR', ipk]);
+        if (n === 1) await store.cmd(['EXPIRE', ipk, 90]);
+        if (n > IP_PER_MIN) throw new HttpError(429, 'Troppe richieste: riprova tra un minuto');
+      }
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
       if (method === 'GET' && route === 'demo/course') return ok(demoCourse(), privateCache(300));
       if (method === 'GET' && route === 'demo/live') return ok(demoLive(now()), NOCACHE);
@@ -620,6 +641,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (method === 'GET' && route === 'stats') return ok(await stats(query, h), cache(15));
       throw new HttpError(404, 'Non trovato');
     } catch (e) {
+      if (e instanceof HttpError && e.status === 401 && ipk) { try { await store.cmd(['INCRBY', ipk, 5]); } catch { /* il limite resta quello già contato */ } }   // un accesso sbagliato pesa 6 richieste
       if (e instanceof HttpError) return { status: e.status, headers: NOCACHE, json: { error: e.message } };
       console.error(e);
       return { status: 500, headers: NOCACHE, json: { error: 'Errore interno' } };

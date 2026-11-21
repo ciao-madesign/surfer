@@ -67,6 +67,7 @@ function memory(clock) {
       case 'EXISTS': return live(k) ? 1 : 0;
       case 'EXPIRE': { const e = live(k); if (!e) return 0; e.exp = clock() + Number(a[0]) * 1000; return 1; }
       case 'TTL': { const e = live(k); return !e ? -2 : e.exp ? Math.ceil((e.exp - clock()) / 1000) : -1; }
+      case 'INCRBY': { const e = need(k, 's', () => '0'); e.v = String(Number(e.v) + Number(a[0])); return Number(e.v); }
       case 'INCR': { const e = need(k, 's', () => '0'); e.v = String(Number(e.v) + 1); return Number(e.v); }
       case 'HSET': { const e = need(k, 'h', () => ({})); let n = 0;
         for (let i = 0; i < a.length; i += 2) { if (!(a[i] in e.v)) n++; e.v[a[i]] = String(a[i + 1]); } return n; }

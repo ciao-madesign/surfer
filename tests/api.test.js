@@ -646,3 +646,27 @@ test('diritti del corridore: vede i propri dati e li cancella con il proprio cod
   const live = await api('GET', '/api/live', null, {}, { t: r.view });
   assert.equal(live.json.participants.length, 0);
 });
+
+test('limiti: tentativi con credenziali sbagliate e troppe richieste dalla stessa rete', async () => {
+  const { api } = setup();
+  let last;
+  for (let i = 0; i < 25; i++) last = await api('GET', '/api/live', null, {}, { t: 'x'.repeat(30) });
+  assert.equal(last.status, 429, 'dopo una ventina di accessi sbagliati la rete viene fermata');
+  const { api: api2 } = setup();
+  const r = await race(api2);
+  let st = 0;
+  for (let i = 0; i < 125; i++) st = (await api2('GET', '/api/live', null, {}, { t: r.view })).status;
+  assert.equal(st, 429, 'oltre 120 richieste al minuto da una rete');
+  const { api: api3, clock } = setup();
+  const r3 = await race(api3);
+  assert.equal((await api3('GET', '/api/live', null, {}, { t: r3.view })).status, 200);
+  clock.advance(61000);
+  assert.equal((await api3('GET', '/api/live', null, {}, { t: r3.view })).status, 200, 'il limite si azzera dopo un minuto');
+});
+
+test('cache: parametri in più e intestazione del token non sono accettati', async () => {
+  const { api } = setup();
+  const r = await race(api);
+  assert.equal((await api('GET', '/api/live', null, {}, { t: r.view, x: '1' })).status, 400);
+  assert.equal((await api('GET', '/api/live', null, { 'x-view-token': r.view })).status, 401);
+});
