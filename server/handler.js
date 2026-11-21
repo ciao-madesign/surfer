@@ -11,6 +11,7 @@ const SAFETY_TTL = 3 * DAY;          // rete di sicurezza: posizioni GPS di gare
 const DRAFT_TTL = 15 * DAY;          // gara non avviata: link e bozza durano 15 giorni dalla creazione
 const LIVE_TTL = 7 * DAY;            // gara avviata e mai chiusa: 7 giorni dall'avvio (poi 24 ore dopo la fine)
 const MAX_PARTICIPANTS = 5;
+const CONSENT_VERSION = '1';   // versione del testo di consenso mostrato al corridore
 const MAX_HISTORY = 9000;     // punti per corridore: copre le 36 ore di una gara a un punto ogni 15 s
 const STALE_MS = 180000;      // senza segnale oltre 3 minuti: stato «senza connessione» e stima d'arrivo sospesa
 const MAX_BATCH = 120;
@@ -189,7 +190,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   }
 
   // Il corridore, con il proprio codice di accesso, vede cosa è salvato su di lui e può cancellarlo.
-  async function deviceMe(headers, method) {
+  async function deviceMe(headers, method, body) {
     const dev = bearer(headers);
     if (!dev) throw new HttpError(401, 'Credenziale dispositivo mancante');
     const ref = await getJSON(store, k.dev(sha256(dev)));
@@ -198,8 +199,14 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const p = m.participants.find((x) => x.id === ref.pid);
     if (!p) throw new HttpError(401, 'Dispositivo non autorizzato');
     if (method === 'DELETE') { await removeParticipant(m, p); return { ok: true }; }
+    if (method === 'POST') {   // consenso del corridore: solo con questo gesto le sue posizioni vengono accettate
+      if (m.status === 'ended') throw new HttpError(410, 'Gara conclusa');
+      if (body?.accept !== true || body?.ageOk !== true) throw bad('Serve il consenso esplicito');
+      if (!p.consentAt) { p.consentAt = now(); p.consentVersion = CONSENT_VERSION; await saveRace(m); }
+      return { ok: true, consentAt: p.consentAt };
+    }
     const l = await store.cmd(['HGET', k.last(m.id), p.id]);
-    return { name: p.name, raceName: m.name, raceStatus: m.status, points: l ? JSON.parse(l).n ?? 0 : 0 };
+    return { name: p.name, raceName: m.name, raceStatus: m.status, consent: !!p.consentAt, consentAt: p.consentAt ?? null, points: l ? JSON.parse(l).n ?? 0 : 0 };
   }
 
   // ---------- rotte amministratore ----------
@@ -343,7 +350,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
         let stats = null;
         if (course && rows.length) { stats = { ...runnerStats(course, rows, m.startedAt, m.endedAt), etaSec: null, etaAt: null }; }
         const passages = cps.map((c, idx) => (pass[`${c.id}:${p.id}`] ? { cp: idx, t: Number(pass[`${c.id}:${p.id}`]) } : null)).filter(Boolean);
-        return { id: p.id, name: p.name, color: p.color, stats, passages };
+        return { id: p.id, name: p.name, color: p.color, stats, passages, consentAt: p.consentAt ?? null, consentVersion: p.consentVersion ?? null };
       }),
     };
   }
@@ -424,11 +431,12 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     if (!r) throw new HttpError(404, 'Report non trovato o scaduto');
     if (!safeEqual(sig, reportSig(id, r.reportSalt))) throw new HttpError(401, 'Link del report non valido');
     if (r.expiresAt != null && r.expiresAt < now()) throw new HttpError(410, 'Report scaduto');
-    const { course, accountId, reportSalt, ...pub } = r;      // la traccia e l'account non escono mai dal report
+    const { course, accountId, reportSalt, ...pub } = r;
+    pub.participants = pub.participants.map(({ consentAt, consentVersion, ...rest }) => rest);      // la traccia e l'account non escono mai dal report
     return { ...pub, serverTime: now() };
   }
 
-  const pubParticipant = (p) => ({ id: p.id, name: p.name, color: p.color });
+  const pubParticipant = (p) => ({ id: p.id, name: p.name, color: p.color, consent: !!p.consentAt });
   const pubMeta = (m) => ({ id: m.id, name: m.name, status: m.status, createdAt: m.createdAt, startedAt: m.startedAt,
     endedAt: m.endedAt, archive: m.archive?.state ?? null, reportPath: reportPath(m), hasLink: !!m.viewHash, participants: m.participants.map(pubParticipant),
     checkpoints: m.checkpoints.map(({ id, name, km, auto }) => ({ id, name, km, auto })) });
@@ -446,6 +454,9 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
 
     const m = await loadRace(ref.raceId);
     if (m.status === 'ended') throw new HttpError(410, 'Gara conclusa');
+    const me = m.participants.find((x) => x.id === ref.pid);
+    if (!me) throw new HttpError(401, 'Dispositivo non autorizzato');
+    if (!me.consentAt) throw new HttpError(403, 'Il corridore non ha ancora dato il consenso');
     // una sola richiesta alla volta per corridore: evita che due invii ravvicinati si sovrascrivano
     const lock = `lock:${m.id}:${ref.pid}`;
     if (!(await store.cmd(['SET', lock, '1', 'NX', 'EX', 15]))) throw new HttpError(429, 'Invio già in corso, riprova');
@@ -460,7 +471,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     let stale = 0;
     const usable = raw.filter((p) => {
       if (typeof p.t !== 'number' || !isFinite(p.t)) throw bad('t non valido');
-      if (p.t < t - DAY * 1000 || p.t > t + 120000) { stale++; return false; }
+      if (p.t < t - DAY * 1000 || p.t > t + 120000 || p.t < me.consentAt) { stale++; return false; }   // niente punti precedenti al consenso
       return true;
     });
     const pts = usable.map((p) => ({
@@ -635,6 +646,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));
       if (route === 'device/me' && (method === 'GET' || method === 'DELETE')) return ok(await deviceMe(h, method));
+      if (route === 'device/consent' && method === 'POST') return ok(await deviceMe(h, 'POST', body));
       if (route === 'device/overland' && method === 'POST') return ok(await overland(h, query, body));
       if (method === 'GET' && route === 'live') return ok(await live(query, h), cache(5));
       if (method === 'GET' && route === 'course') return ok(await courseRoute(query, h), privateCache(60));

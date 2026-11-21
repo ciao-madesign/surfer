@@ -4,6 +4,7 @@ const $ = (id) => document.getElementById(id);
 const LS = { pairing: 'tt.pairing', queue: 'tt.queue' };
 const MAX_QUEUE = 3000, CHUNK = 100;
 let pairing = null, watchId = null, wake = null, sharing = false, sending = false;
+let consent = null;   // null = da verificare, false = non ancora dato, true = dato
 let lastFix = null, lastEnq = 0, lastSentAt = 0, retry = 5000, queue = [], watchdog = null;
 
 const load = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
@@ -22,6 +23,8 @@ function ui() {
   $('pair').hidden = !!pairing; $('run').hidden = !pairing;
   if (!pairing) return;
   $('who').textContent = pairing.name;
+  $('consent').hidden = consent !== false;
+  $('toggle').hidden = $('hint').hidden = consent !== true;
   const st = $('state');
   st.textContent = !sharing ? (lastFix ? 'Condivisione ferma: la tua posizione non viene più inviata' : 'Condivisione ferma') : document.hidden ? 'In pausa: pagina in secondo piano' : lastFix && Date.now() - lastFix.t > 90000 ? 'Segnale GPS assente' : 'Condivisione attiva';
   st.className = 'state ' + (sharing && !document.hidden && !(lastFix && Date.now() - lastFix.t > 90000) ? 'ok' : sharing ? 'bad' : '');
@@ -35,11 +38,29 @@ function ui() {
   document.body.classList.toggle('sharing', sharing);
 }
 const showErr = (m) => { $('err').textContent = m || ''; };
+async function loadMe() {   // chiede al server cosa risulta su questo corridore (e se ha già dato il consenso)
+  consent = null; ui();
+  try {
+    const r = await fetch('/api/device/me', { headers: { authorization: `Bearer ${pairing.token}` } });
+    if (r.status === 401) { pairing = null; localStorage.removeItem(LS.pairing); showPairErr('Questo collegamento non è più valido. Chiedi un nuovo QR all\'organizzatore.'); ui(); return; }
+    const j = await r.json(); consent = !!j.consent; pairing.name = j.name || pairing.name;
+  } catch { consent = true; /* offline: si prosegue; il server rifiuta comunque i dati senza consenso */ }
+  ui();
+}
+$('age').onchange = () => { $('agree').disabled = !$('age').checked; };
+$('agree').onclick = async () => {
+  try {
+    const r = await fetch('/api/device/consent', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${pairing.token}` }, body: JSON.stringify({ accept: true, ageOk: true }) });
+    if (!r.ok) throw new Error();
+    consent = true; showErr('');
+  } catch { showErr('Non sono riuscito a registrare il consenso. Riprova.'); }
+  ui();
+};
 const showPairErr = (m) => { $('perr').textContent = m || ''; };
 
 // ---------- collegamento ----------
 $('link').onclick = () => {
-  try { pairing = parsePairing($('code').value); save(LS.pairing, pairing); $('code').value = ''; showPairErr(''); showErr(''); }
+  try { pairing = parsePairing($('code').value); save(LS.pairing, pairing); $('code').value = ''; showPairErr(''); showErr(''); loadMe(); }
   catch { showPairErr('Codice non valido. Incolla il link o il codice ricevuto dall\'organizzatore.'); }
   ui();
 };
@@ -50,10 +71,10 @@ $('forget').onclick = async () => {
     if (!r.ok && r.status !== 401) throw new Error();
   } catch { return showErr('Cancellazione non riuscita. Riprova tra poco.'); }
   if (sharing) stop(false);
-  pairing = null; lastFix = null; localStorage.removeItem(LS.pairing); queue = []; save(LS.queue, queue); showErr(''); ui();
+  pairing = null; consent = null; lastFix = null; localStorage.removeItem(LS.pairing); queue = []; save(LS.queue, queue); showErr(''); ui();
   showPairErr('I tuoi dati sono stati cancellati dalla gara.');
 };
-$('unlink').onclick = () => { if (sharing) stop(); pairing = null; localStorage.removeItem(LS.pairing); ui(); };
+$('unlink').onclick = () => { if (sharing) stop(); pairing = null; consent = null; localStorage.removeItem(LS.pairing); ui(); };
 
 // ---------- invio ----------
 async function post(points, status) {
@@ -70,6 +91,7 @@ async function flush(status = 'tracking', force = false) {
       try { code = await post(batch, status); } catch { showErr('Nessuna connessione: i dati restano nel telefono e partono appena torna.'); scheduleRetry(); return; }
       if (code === 200 || code === 400) { queue.splice(0, batch.length); save(LS.queue, queue); lastSentAt = Date.now(); retry = 5000; showErr(code === 400 ? 'Alcuni dati sono stati rifiutati dal server.' : ''); }
       else if (code === 401) { showErr('Collegamento non più valido: chiedi un nuovo QR all\'organizzatore.'); stop(false); return; }
+      else if (code === 403) { consent = false; showErr('Serve prima il tuo consenso.'); stop(false); return; }
       else if (code === 410) { showErr('La gara è finita: condivisione terminata.'); stop(false); return; }
       else { showErr('Servizio non raggiungibile, riprovo.'); scheduleRetry(); return; }
     } while (queue.length);
@@ -100,7 +122,6 @@ async function keepAwake() {
   catch { /* non supportato: l'avviso resta valido */ }
 }
 function start() {
-  if (!confirm('Condividere la tua posizione?\n\nDurante la gara verrà inviata a chi ha il link. Puoi interrompere quando vuoi. I dati vengono cancellati 24 ore dopo la fine.')) return;
   if (!('geolocation' in navigator)) return showErr('Questo browser non supporta la posizione.');
   sharing = true; lastEnq = 0; showErr('');
   watchId = navigator.geolocation.watchPosition(onFix, onGpsError, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
@@ -129,4 +150,5 @@ if (location.hash.length > 20) {
   history.replaceState(null, '', location.pathname);
 }
 if (queue.length && !pairing) { queue = []; save(LS.queue, queue); }
-ui(); setInterval(ui, 5000);
+if (pairing) loadMe(); else ui();
+setInterval(ui, 5000);

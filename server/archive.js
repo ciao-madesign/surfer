@@ -86,10 +86,10 @@ export function neonArchive(databaseUrl) {
           [s.id, s.checkpoints.map((c) => c.idx), s.checkpoints.map((c) => c.name), s.checkpoints.map((c) => c.km),
             s.checkpoints.map((c) => c.radius)]),
         tx.query(
-          `INSERT INTO participants (id, race_id, name, color, stats)
-           SELECT a, $1, b, c, d::jsonb FROM unnest($2::text[], $3::text[], $4::text[], $5::text[]) AS t(a, b, c, d)`,
+          `INSERT INTO participants (id, race_id, name, color, stats, consent_at, consent_version)
+           SELECT a, $1, b, c, d::jsonb, to_timestamp(e / 1000.0), f FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::float8[], $7::text[]) AS t(a, b, c, d, e, f)`,
           [s.id, ps.map((p) => dbId(s.id, p.id)), ps.map((p) => p.name), ps.map((p) => p.color ?? null),
-            ps.map((p) => (p.stats ? JSON.stringify(p.stats) : null))]),
+            ps.map((p) => (p.stats ? JSON.stringify(p.stats) : null)), ps.map((p) => p.consentAt ?? null), ps.map((p) => p.consentVersion ?? null)]),
         tx.query(
           `INSERT INTO passages (race_id, participant_id, cp_idx, t)
            SELECT $1, a, b, to_timestamp(c / 1000.0) FROM unnest($2::text[], $3::int[], $4::float8[]) AS t(a, b, c)`,

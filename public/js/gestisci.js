@@ -43,6 +43,7 @@ const refresh = async () => { await load(); render(); };
 const ago = (ms) => { const s = Math.max(0, Math.round((serverTime - ms) / 1000)); return s < 90 ? `${s} s fa` : s < 5400 ? `${Math.round(s / 60)} min fa` : `${Math.round(s / 3600)} h fa`; };
 function signal(p) {
   const x = p.received;
+  if (!p.consent) return ['wait', 'In attesa del consenso del corridore'];
   if (!x) return ['wait', 'In attesa del primo segnale…'];
   const fresh = serverTime - x.rcv < 90000;
   return [fresh ? 'ok' : 'old', `${fresh ? 'Segnale ricevuto ✓' : 'Ultimo segnale'} ${ago(x.rcv)}`];
@@ -83,6 +84,7 @@ function sHow() {
   return el('div', { class: 'keynote' }, el('b', {}, 'Come si collega'), tabs,
     el('ol', { class: 'how' },
       el('li', {}, 'Inquadra il QR con la fotocamera e apri il link nel browser.'),
+      el('li', {}, 'Leggi le informazioni e dai il consenso.'),
       el('li', {}, 'Tocca «Avvia condivisione» e consenti la posizione.'),
       el('li', {}, ip ? 'Tieni lo schermo acceso e la pagina aperta.' : 'Tieni lo schermo acceso e disattiva il risparmio energetico.')),
     el('p', { class: 'small muted' }, ip ? 'A schermo spento? Usa l\'app gratuita Overland (sotto).' : 'Su Android, per ora, la pagina deve restare aperta e lo schermo acceso.'),
@@ -103,7 +105,7 @@ function sConnect() {
         const j = await api('POST', `races/${race.id}/participants/${p.id}/token`, {});
         setSec((o) => { o[p.id] = { pairing: j.pairing, device: j.deviceToken }; }); await refresh();
       }) }, x ? 'Nuovo QR code' : 'Mostra QR code')),
-      x ? el('p', { class: 'small', style: 'margin-top:8px' }, 'Verifica che il corridore sia d\'accordo a condividere la posizione.') : '',
+      x ? el('p', { class: 'small', style: 'margin-top:8px' }, 'Anche con Overland il corridore apre prima il suo link e dà il consenso: finché non lo fa, le posizioni non vengono accettate.') : '',
       x && platform === 'iphone' ? el('details', { class: 'small', style: 'margin-top:8px' }, el('summary', {}, 'Con l\'app Overland (anche a schermo spento)'),
         el('p', { class: 'muted' }, 'Scarica «Overland» dall\'App Store e inserisci questi dati.'),
         el('div', { class: 'muted' }, 'Receiver Endpoint'), el('div', { class: 'secret' }, `${base}/api/device/overland`), el('button', { onclick: () => copy(`${base}/api/device/overland`) }, 'Copia indirizzo'),

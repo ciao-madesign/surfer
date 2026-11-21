@@ -24,6 +24,13 @@ body.sharing{background:#050709}
 <section id="run" hidden>
   <div class="card"><b id="who"></b> <button id="unlink" class="small"  style="float:right">Cambia corridore</button>
     <div class="state" id="state">Condivisione ferma</div></div>
+  <div class="card" id="consent" hidden>
+    <b>Condividere la tua posizione?</b>
+    <p class="small">Durante la gara la tua posizione e il tuo nome sono visibili a chi ha il link della gara. Le posizioni vengono cancellate 24 ore dopo la fine; il report con i tempi resta 3 giorni. Puoi cancellare i tuoi dati in qualsiasi momento da questa pagina.</p>
+    <label class="small"><input type="checkbox" id="age" style="width:auto;min-height:0"> Ho almeno 14 anni, oppure sono il genitore o tutore e acconsento per un minore.</label>
+    <p class="small muted">Se usi l'app Overland, dai qui il consenso: la condivisione parte dall'app.</p>
+    <button class="primary big" id="agree" disabled>Acconsento</button>
+  </div>
   <div class="warn" id="hint">Tieni <b>lo schermo acceso</b> e questa pagina aperta. Se blocchi il telefono, la condivisione si ferma.</div>
   <button class="primary big" id="toggle">Avvia condivisione</button>
   <dl><dt>Ultimo punto</dt><dd id="last">–</dd><dt>Precisione GPS</dt><dd id="acc">–</dd><dt>In attesa di invio</dt><dd id="queue">0</dd>

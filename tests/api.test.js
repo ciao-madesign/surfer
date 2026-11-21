@@ -20,11 +20,12 @@ function setup() {
 
 async function race(api, extra = {}) {
   const r = await api('POST', '/api/admin/races', { name: 'Trail di prova', course: { points: COURSE },
-    checkpoints: [{ name: 'Ristoro', lat: at(5)[0], lon: 8 }], ...extra }, ADMIN);
+    checkpoints: [{ name: 'Ristoro', lat: at(5)[0], lon: 8 }], ...(({ noConsent, ...rest }) => rest)(extra) }, ADMIN);
   assert.equal(r.status, 200, JSON.stringify(r.json));
   const id = r.json.race.id;
   const p = await api('POST', `/api/admin/races/${id}/participants`, { name: 'Anna' }, ADMIN);
   const link = await api('POST', `/api/admin/races/${id}/link`, {}, ADMIN);
+  if (!extra.noConsent) await api('POST', '/api/device/consent', { accept: true, ageOk: true }, { authorization: `Bearer ${p.json.deviceToken}` });
   return { id, dev: p.json.deviceToken, pid: p.json.participant.id, view: link.json.token, pairing: p.json.pairing };
 }
 const send = (api, dev, points, status) =>
@@ -669,4 +670,30 @@ test('cache: parametri in più e intestazione del token non sono accettati', asy
   const r = await race(api);
   assert.equal((await api('GET', '/api/live', null, {}, { t: r.view, x: '1' })).status, 400);
   assert.equal((await api('GET', '/api/live', null, { 'x-view-token': r.view })).status, 401);
+});
+
+test('consenso: senza il gesto del corridore le posizioni non vengono accettate e non valgono punti precedenti', async () => {
+  const { api, clock } = setup();
+  const r = await race(api, { noConsent: true });
+  const auth = { authorization: `Bearer ${r.dev}` };
+  assert.equal((await send(api, r.dev, [pt(clock.now(), 0.1)])).status, 403);
+  assert.equal((await api('POST', '/api/device/consent', { accept: true }, auth)).status, 400, 'serve anche la conferma dell\'età');
+  assert.equal((await api('POST', '/api/device/consent', {}, auth)).status, 400);
+  const before = clock.now();
+  clock.advance(60000);
+  assert.equal((await api('POST', '/api/device/consent', { accept: true, ageOk: true }, auth)).status, 200);
+  const res = await send(api, r.dev, [pt(before, 0.1), pt(clock.now() + 1000, 0.2)]);
+  assert.equal(res.status, 200); assert.equal(res.json.accepted, 1, 'il punto precedente al consenso è scartato');
+  const me = (await api('GET', '/api/device/me', null, auth)).json;
+  assert.equal(me.consent, true);
+});
+
+test('consenso: data e versione vanno nell\'archivio ma non nel report pubblico', async () => {
+  const { api, clock, archive } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const end = await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  const s = await archive.getRace(r.id);
+  assert.ok(s.participants[0].consentAt > 0); assert.equal(s.participants[0].consentVersion, '1');
+  const rep = await api('GET', '/api/report', null, {}, { t: end.json.race.reportPath.split('#')[1] });
+  assert.equal(rep.json.participants[0].consentAt, undefined);
 });
