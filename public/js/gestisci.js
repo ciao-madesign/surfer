@@ -144,7 +144,10 @@ function sReport() {
     const url = `${location.origin}${race.reportPath}`;
     return el('section', { class: 'card' }, el('h2', {}, 'Report di gara'),
       el('p', { class: 'small muted' }, 'Tempi per settore e confronti. Disponibile 3 giorni.'),
-      el('div', { class: 'secret' }, url), el('div', { class: 'row' }, el('button', { onclick: () => copy(url) }, 'Copia link'), el('a', { href: race.reportPath, target: '_blank', rel: 'noopener', class: 'tag' }, 'Apri')));
+      el('div', { class: 'secret' }, url), el('div', { class: 'row' }, el('button', { onclick: () => copy(url) }, 'Copia link'), el('a', { href: race.reportPath, target: '_blank', rel: 'noopener', class: 'tag' }, 'Apri')),
+      el('div', { class: 'row', style: 'margin-top:8px' }, el('button', { class: 'small', onclick: run(async () => {
+        if (!confirm('Creare un nuovo link del report? Quello vecchio smette di funzionare.')) return;
+        await api('POST', `races/${race.id}/report`, {}); await refresh(); msg('Nuovo link creato'); }) }, 'Nuovo link del report')));
   }
   if (race.status === 'ended' && race.archive === 'pending') return el('section', { class: 'card' }, el('h2', {}, 'Report in preparazione'),
     el('p', { class: 'small muted' }, 'Il sistema riprova da solo. Puoi riprovare anche ora.'),

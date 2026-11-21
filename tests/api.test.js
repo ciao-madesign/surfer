@@ -506,7 +506,9 @@ test('report: link firmato, leggibile finché l\'archivio lo conserva, senza tra
   assert.equal((await api('GET', '/api/report', null, {}, { t: t.slice(0, -1) + 'x' })).status, 401);
   assert.equal((await api('GET', '/api/report', null, {}, { t: 'x.y' })).status, 401);
   assert.equal((await api('GET', '/api/report', null, {}, {})).status, 401);
-  assert.equal((await api('GET', '/api/report', null, {}, { t: `altra.${t.split('.')[1]}` })).status, 401, 'la firma vale solo per la propria gara');
+  assert.equal((await api('GET', '/api/report', null, {}, { t: `altra.${t.split('.')[1]}` })).status, 404, 'gara inesistente');
+  const id = t.split('.')[0];
+  assert.equal((await api('GET', '/api/report', null, {}, { t: `${id}.${'0'.repeat(32)}` })).status, 401, 'la firma vale solo per la propria gara');
 });
 
 test('report: scade con l\'archivio (3 giorni senza profilo)', async () => {
@@ -598,4 +600,49 @@ test('invio: un punto troppo vecchio non fa rifiutare gli altri; due invii insie
   const k = (await store.cmd(['SMEMBERS', 'races']))[0];
   await store.cmd(['SET', `lock:${k}:${r.pid}`, '1', 'NX', 'EX', 15]);   // un altro invio è in corso
   assert.equal((await send(api, r.dev, [pt(n + 1000, 0.3)])).status, 429);
+});
+
+test('cancellazione: eliminare la gara cancella anche l\'archivio e il link al report', async () => {
+  const { api, clock, archive } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const end = await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  const t = end.json.race.reportPath.split('#')[1];
+  assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 200);
+  assert.equal((await api('DELETE', `/api/admin/races/${r.id}`, null, ADMIN)).status, 200);
+  assert.equal(await archive.getRace(r.id), null);
+  assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 404);
+});
+
+test('cancellazione: l\'organizzatore toglie un corridore anche dall\'archivio', async () => {
+  const { api, clock, archive } = setupArchive();
+  const r = await finishedRace(api, clock);
+  await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  assert.equal((await archive.getRace(r.id)).participants.length, 1);
+  assert.equal((await api('DELETE', `/api/admin/races/${r.id}/participants/${r.pid}`, null, ADMIN)).status, 200);
+  assert.equal((await archive.getRace(r.id)).participants.length, 0);
+});
+
+test('report: nuovo link, il vecchio smette di funzionare', async () => {
+  const { api, clock } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const old = (await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN)).json.race.reportPath.split('#')[1];
+  const nuovo = (await api('POST', `/api/admin/races/${r.id}/report`, {}, ADMIN)).json.reportPath.split('#')[1];
+  assert.notEqual(old, nuovo);
+  assert.equal((await api('GET', '/api/report', null, {}, { t: old })).status, 401);
+  assert.equal((await api('GET', '/api/report', null, {}, { t: nuovo })).status, 200);
+});
+
+test('diritti del corridore: vede i propri dati e li cancella con il proprio codice', async () => {
+  const { api, clock } = setupArchive();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  await api('POST', '/api/device/positions', { points: [pt(clock.now(), 0.1)] }, { authorization: `Bearer ${r.dev}` });
+  const auth = { authorization: `Bearer ${r.dev}` };
+  const me = await api('GET', '/api/device/me', null, auth);
+  assert.equal(me.status, 200); assert.equal(me.json.name, 'Anna'); assert.equal(me.json.points, 1);
+  assert.equal((await api('GET', '/api/device/me', null, { authorization: 'Bearer sbagliato-sbagliato-sbagliato' })).status, 401);
+  assert.equal((await api('DELETE', '/api/device/me', null, auth)).status, 200);
+  assert.equal((await api('GET', '/api/device/me', null, auth)).status, 401, 'il codice non vale più');
+  const live = await api('GET', '/api/live', null, {}, { t: r.view });
+  assert.equal(live.json.participants.length, 0);
 });

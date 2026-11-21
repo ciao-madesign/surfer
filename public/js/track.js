@@ -43,6 +43,16 @@ $('link').onclick = () => {
   catch { showPairErr('Codice non valido. Incolla il link o il codice ricevuto dall\'organizzatore.'); }
   ui();
 };
+$('forget').onclick = async () => {
+  if (!confirm('Cancellare il tuo nome e le tue posizioni dalla gara? Non si può annullare.')) return;
+  try {
+    const r = await fetch('/api/device/me', { method: 'DELETE', headers: { authorization: `Bearer ${pairing.token}` } });
+    if (!r.ok && r.status !== 401) throw new Error();
+  } catch { return showErr('Cancellazione non riuscita. Riprova tra poco.'); }
+  if (sharing) stop(false);
+  pairing = null; lastFix = null; localStorage.removeItem(LS.pairing); queue = []; save(LS.queue, queue); showErr(''); ui();
+  showPairErr('I tuoi dati sono stati cancellati dalla gara.');
+};
 $('unlink').onclick = () => { if (sharing) stop(); pairing = null; localStorage.removeItem(LS.pairing); ui(); };
 
 // ---------- invio ----------

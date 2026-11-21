@@ -166,6 +166,31 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     return createRace(body, true);
   }
 
+  // Cancella un corridore: archivio (se la gara è già archiviata) e dati live. Usata da organizzatore e dal corridore stesso.
+  async function removeParticipant(m, p) {
+    if (archive.enabled && m.status === 'ended' && m.archive?.state === 'done') {
+      try { await archive.deleteParticipant(m.id, p.id); }
+      catch (e) { console.log(JSON.stringify({ ev: 'delete-failed', race: m.id, err: String(e.message || e).slice(0, 120) })); throw new HttpError(503, 'Cancellazione non riuscita: riprova tra poco'); }
+    }
+    m.participants = m.participants.filter((x) => x !== p);
+    await saveRace(m, m.status === 'ended' && m.archive?.state === 'pending' ? SAFETY_TTL : lifeTtl(m));
+    await store.pipeline([['DEL', k.dev(p.deviceHash)], ['DEL', k.pos(m.id, p.id)], ['HDEL', k.last(m.id), p.id]]);
+  }
+
+  // Il corridore, con il proprio codice di accesso, vede cosa è salvato su di lui e può cancellarlo.
+  async function deviceMe(headers, method) {
+    const dev = bearer(headers);
+    if (!dev) throw new HttpError(401, 'Credenziale dispositivo mancante');
+    const ref = await getJSON(store, k.dev(sha256(dev)));
+    if (!ref) throw new HttpError(401, 'Dispositivo non autorizzato');
+    const m = await loadRace(ref.raceId);
+    const p = m.participants.find((x) => x.id === ref.pid);
+    if (!p) throw new HttpError(401, 'Dispositivo non autorizzato');
+    if (method === 'DELETE') { await removeParticipant(m, p); return { ok: true }; }
+    const l = await store.cmd(['HGET', k.last(m.id), p.id]);
+    return { name: p.name, raceName: m.name, raceStatus: m.status, points: l ? JSON.parse(l).n ?? 0 : 0 };
+  }
+
   // ---------- rotte amministratore ----------
   async function adminRoutes(method, parts, body, headers, reqOrigin) {
     const scope = await authorize(headers);
@@ -203,7 +228,10 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
         return { race, serverTime: now() };
       }
       if (method === 'DELETE') {
-        await store.pipeline([...allKeys(m).map((key) => ['DEL', key]), ['SREM', 'races', m.id]]);
+        if (archive.enabled) {   // prima l'archivio: se non riesce, non si perde il modo di riprovare
+          try { await archive.deleteRace(m.id); } catch (e) { console.log(JSON.stringify({ ev: 'delete-failed', race: m.id, err: String(e.message || e).slice(0, 120) })); throw new HttpError(503, 'Cancellazione non riuscita: riprova tra poco'); }
+        }
+        await store.pipeline([...allKeys(m).map((key) => ['DEL', key]), ['SREM', 'races', m.id], ['SREM', 'archq', m.id]]);
         return { ok: true };
       }
     }
@@ -230,12 +258,17 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
       return { participant: pubParticipant(p), deviceToken: dev, pairing };
     }
+    if (sub === 'report' && method === 'POST') {   // nuovo link del report: il vecchio smette di funzionare
+      if (!archive.enabled || m.status !== 'ended' || m.archive?.state !== 'done') throw bad('Report non ancora disponibile');
+      const salt = token(12);
+      try { await archive.setReportSalt(m.id, salt); } catch { throw new HttpError(503, 'Operazione non riuscita: riprova tra poco'); }
+      m.reportSalt = salt; await applyRetention(m);
+      return { reportPath: reportPath(m) };
+    }
     if (sub === 'participants' && method === 'DELETE' && parts.length === 4) {
       const p = m.participants.find((x) => x.id === parts[3]);
       if (!p) throw new HttpError(404, 'Partecipante non trovato');
-      m.participants = m.participants.filter((x) => x !== p);
-      await saveRace(m);
-      await store.pipeline([['DEL', k.dev(p.deviceHash)], ['DEL', k.pos(m.id, p.id)], ['HDEL', k.last(m.id), p.id]]);
+      await removeParticipant(m, p);
       return { ok: true };
     }
     if (sub === 'link') {
@@ -289,7 +322,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const cps = m.checkpoints;           // già ordinati per km
     return {
       id: m.id, name: m.name, accountId: m.accountId ?? null, startedAt: m.startedAt, endedAt: m.endedAt,
-      totalKm: course?.totalKm ?? null,
+      totalKm: course?.totalKm ?? null, reportSalt: m.reportSalt ?? null,
       meta: course ? { gain: course.gain, loss: course.loss } : null,
       course: m.accountId && course ? { name: course.name, points: course.points, totalKm: course.totalKm, gain: course.gain, loss: course.loss } : null,
       expiresAt: m.accountId ? null : m.endedAt + ANON_REPORT_DAYS * DAY * 1000,
@@ -334,7 +367,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   }
 
   async function endRace(m) {
-    m.status = 'ended'; m.endedAt = now();
+    m.status = 'ended'; m.endedAt = now(); m.reportSalt = token(12);
     await tryArchive(m);
     await applyRetention(m);
     await store.cmd(['SREM', 'races', m.id]);
@@ -366,19 +399,21 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   // Il collegamento al report si ricava dall'id della gara con una firma segreta: non serve salvarlo e resta
   // sempre lo stesso. Chi lo ha può leggere il report finché l'archivio lo conserva.
   const reportSecret = env.REPORT_SECRET || '';   // dedicato: senza, i report restano disattivati
-  const reportToken = (id) => `${id}.${hmac(reportSecret, `report:${id}`).slice(0, 32)}`;
-  const reportPath = (m) => (reportSecret && m.status === 'ended' && m.archive?.state === 'done' ? `/report#${reportToken(m.id)}` : null);
+  const reportSig = (id, salt) => hmac(reportSecret, `report:${id}${salt ? `:${salt}` : ''}`).slice(0, 32);   // il sale per gara rende il link revocabile
+  const reportToken = (id, salt) => `${id}.${reportSig(id, salt)}`;
+  const reportPath = (m) => (reportSecret && m.status === 'ended' && m.archive?.state === 'done' ? `/report#${reportToken(m.id, m.reportSalt)}` : null);
 
   async function report(query) {
     const t = String(query.t || '');
     const i = t.lastIndexOf('.');
     const id = t.slice(0, i), sig = t.slice(i + 1);
-    if (!reportSecret || i < 1 || !safeEqual(sig, hmac(reportSecret, `report:${id}`).slice(0, 32))) throw new HttpError(401, 'Link del report non valido');
+    if (!reportSecret || i < 1 || !/^[\w-]{4,40}$/.test(id) || sig.length !== 32) throw new HttpError(401, 'Link del report non valido');
     if (!archive.enabled) throw new HttpError(404, 'Report non disponibile');
     const r = await archive.getRace(id);
     if (!r) throw new HttpError(404, 'Report non trovato o scaduto');
+    if (!safeEqual(sig, reportSig(id, r.reportSalt))) throw new HttpError(401, 'Link del report non valido');
     if (r.expiresAt != null && r.expiresAt < now()) throw new HttpError(410, 'Report scaduto');
-    const { course, accountId, ...pub } = r;      // la traccia e l'account non escono mai dal report
+    const { course, accountId, reportSalt, ...pub } = r;      // la traccia e l'account non escono mai dal report
     return { ...pub, serverTime: now() };
   }
 
@@ -578,6 +613,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));
+      if (route === 'device/me' && (method === 'GET' || method === 'DELETE')) return ok(await deviceMe(h, method));
       if (route === 'device/overland' && method === 'POST') return ok(await overland(h, query, body));
       if (method === 'GET' && route === 'live') return ok(await live(query, h), cache(5));
       if (method === 'GET' && route === 'course') return ok(await courseRoute(query, h), privateCache(60));
