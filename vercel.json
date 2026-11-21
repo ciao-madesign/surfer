@@ -75,7 +75,7 @@
       ]
     },
     {
-      "source": "/((?!privacy|demo|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|robots\\.txt|$).*)",
+      "source": "/((?!privacy|demo|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|logo-surfer\\.svg|apple-touch-icon\\.png|og-image\\.png|sitemap\\.xml|robots\\.txt|$).*)",
       "headers": [
         {
           "key": "X-Robots-Tag",

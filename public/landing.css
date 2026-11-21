@@ -75,6 +75,7 @@ footer.foot{border-top:1px solid var(--wt-border);padding:48px 0 72px;color:var(
 footer.foot .row2{display:flex;flex-wrap:wrap;gap:32px;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
 footer.foot .fam{display:flex;align-items:center;gap:14px;max-width:26em;margin:0}
 footer.foot .fam img{width:36px;height:36px;border-radius:9px}
+footer.foot .fam img[src$='logo-mark.svg']{height:auto;border-radius:0;opacity:.9}
 footer.foot nav{display:flex;gap:28px;flex-wrap:wrap}
 footer.foot a{color:var(--wt-ink);text-decoration:none}
 footer.foot a:hover{color:var(--wt-teal)}

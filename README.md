@@ -1,85 +1,72 @@
 # Surfer · Live
 
-Segui un corridore di trail su una mappa, in tempo reale, con un link privato. Gratuito, senza account e senza app per chi guarda. Pensato per famiglia e amici di chi corre.
+**Segui una gara in diretta, da casa.** Un link privato mostra su una mappa dove si trova chi corre, quando passa ai checkpoint e quando arriverà. Gratuito, senza account e senza app per chi guarda.
 
-Ognuno può creare le proprie gare (percorso GPX, checkpoint, fino a 5 corridori) in pochi minuti e condividere il link.
+Pensato per famiglia, amici e allenatori di chi corre (oggi trail, altri sport in futuro) e per i piccoli eventi: ognuno crea la propria gara (percorso GPX, checkpoint, fino a 5 corridori) in pochi minuti. Il corridore decide: condivide la posizione solo dopo il suo consenso e può fermarsi e cancellare i propri dati quando vuole.
 
-Il progetto è autonomo e fa parte della famiglia [WizTrail](https://github.com/ciao-madesign/WizTrail): usa lo stesso design system, i font e il logo, e riusa il parser GPX di [Simule](https://github.com/ciao-madesign/Simule).
+Il progetto è autonomo e fa parte della famiglia [WizTrail](https://github.com/ciao-madesign/WizTrail): stesso design system e font, logo derivato da quello di WizTrail, parser GPX di [Simule](https://github.com/ciao-madesign/Simule).
+
+Produzione: <https://surfer-eta.vercel.app>
 
 ## Come funziona
 
 1. **Crea la gara** (`/crea`): carichi il GPX, scegli il nome e i checkpoint. Ricevi un indirizzo segreto per gestirla (`/gestisci#…`): va salvato tra i preferiti.
-2. **Percorso guidato** (`/gestisci`): aggiungi i corridori, collega ogni telefono inquadrando un QR code (istruzioni per iPhone e Android, con controllo del segnale), crea il link da condividere e avvia la gara.
-3. **Chi guarda** apre `/live#…` da qualsiasi browser.
-4. A fine gara le posizioni vengono cancellate automaticamente dopo 24 ore.
+2. **Percorso guidato** (`/gestisci`): aggiungi i corridori, collega ogni telefono con un QR code (istruzioni per iPhone e Android), crea il link da condividere e avvia la gara.
+3. **Il corridore** apre il suo link, legge le informazioni e dà il consenso; poi avvia la condivisione dal browser o dall'app Overland.
+4. **Chi guarda** apre `/live#…` da qualsiasi browser.
+5. A fine gara le posizioni si cancellano entro 24 ore; il report con i tempi resta 3 giorni.
 
 ### Come il corridore invia la posizione
-- **Browser del telefono** (`/track`): nessuna installazione. Su iPhone serve lo schermo acceso.
-- **App Overland** (gratuita): invia anche a schermo spento. Endpoint `/api/device/overland`.
-- In arrivo: altre app gratuite (Traccar, OwnTracks, GPSLogger).
+- **Browser del telefono** (`/track`): nessuna installazione. Lo schermo deve restare acceso.
+- **App Overland** (iOS, gratuita): invia anche a schermo spento. Endpoint `/api/device/overland`. Il consenso si dà comunque dal link del corridore.
+- Android a schermo spento: richiede un'app (Traccar, OwnTracks, GPSLogger: vedi [`ROADMAP.md`](ROADMAP.md)).
 
 ## Architettura
 
 | Parte | Dove | Note |
 |---|---|---|
-| API (una sola funzione Vercel) | `api/index.js`, `server/` | Node.js, nessuna dipendenza |
-| Dati in tempo reale | Upstash Redis | Posizioni, ultimo punto, link: scadenza automatica. In locale: memoria |
-| Archivio di fine gara | Postgres su Neon (`server/archive.js`, schema in `db/migrations/`) | Solo tempi, statistiche e checkpoint; la traccia del percorso solo per chi ha un profilo. Mai lo storico GPS |
-| Home e privacy | `public/index.html`, `public/privacy.html` | HTML statico |
-| Creazione e gestione gara | `public/crea.html`, `public/admin.html` | `/gestisci` per gli organizzatori, `/admin` per il gestore del servizio |
-| Pagina osservatori | `public/live.html`, `public/js/live.js` | MapLibre 2D/3D, profilo altimetrico, meteo |
-| Tracker web | `public/track.html` | |
-| App iPhone (facoltativa) | `ios/TrailTrack/` | Swift, mai compilata, non necessaria |
+| API (una sola funzione Vercel, regione Francoforte) | `api/index.js` (adattatore), `server/handler.js` | Node.js, una sola dipendenza (driver Neon) |
+| Dati in tempo reale | Upstash Redis (`server/store.js`) | Posizioni, ultimo punto, link: scadenza automatica. In locale: memoria |
+| Archivio di fine gara | Postgres su Neon (`server/archive.js`, schema in `db/migrations/`) | Solo tempi, statistiche, checkpoint, data del consenso; mai lo storico GPS |
+| Sito e pagine | `public/` | HTML e JavaScript senza framework né bundler |
+| Documentazione interna | `ROADMAP.md`, `docs/pre-dpia.md` | Prossimi passi e valutazione preliminare d'impatto |
 
-Scelte di semplicità: nessun framework né bundler; risposte `live` in cache sulla CDN per non far crescere le letture con il numero di osservatori; dati temporanei e dati permanenti tenuti separati, così il database permanente si può cambiare senza toccare il resto.
+Scelte di semplicità: nessun framework; risposte `live` in cache sulla CDN; dati temporanei e permanenti separati (si cambia il database permanente senza toccare il resto); `store` e `archive` sono interfacce iniettate nell'handler, che non dipende da Vercel.
+
+## Privacy e sicurezza (in sintesi)
+- Il link è una credenziale: chi lo ha vede la gara. I token stanno dopo `#` o in intestazioni, hashati sul server.
+- Quattro credenziali distinte: corridore, chi guarda, organizzatore, gestore del servizio.
+- Consenso esplicito del corridore (non retroattivo, età minima 14 anni o consenso del genitore); il corridore può cancellare i propri dati (`DELETE /api/device/me`); l'organizzatore può eliminare la gara, anche dall'archivio.
+- Link del report revocabile; link di chi guarda con durata legata alla gara (24 ore dopo la fine; 7 giorni dall'avvio; 15 giorni se la gara non parte).
+- Limiti anti-abuso (120 richieste al minuto per rete, indirizzi pseudonimizzati con sale giornaliero), CSP e Permissions-Policy.
+- Pagine operative non indicizzabili: solo home, privacy e condizioni.
+- Informativa in `/privacy`, condizioni in `/condizioni`, valutazione preliminare in `docs/pre-dpia.md`: da far rivedere a un legale o DPO prima del lancio pubblico.
 
 ## Limiti del servizio gratuito
-- 5 corridori per gara, 30 checkpoint.
-- Massimo 5 gare create al giorno per indirizzo IP e 500 gare attive in tutto (configurabili con `CREATE_PER_DAY` e `MAX_ACTIVE_RACES`).
-- 120 punti per richiesta, 30 richieste al minuto per dispositivo.
-
-## Fine gara e archivio
-Alla chiusura (manuale, o automatica dopo 36 ore) il riepilogo passa su Neon in una sola transazione ripetibile, poi viene verificato. Redis si svuota entro 24 ore **solo dopo la conferma**: se Neon non risponde i dati restano più a lungo e si riprova (pulsante di nuovo tentativo e attività giornaliera `/api/cron/archive`). Senza profilo il report resta 3 giorni, poi viene cancellato. Lo storico GPS completo non lascia mai Redis. Senza `DATABASE_URL` l'archivio è spento e tutto scade dopo 24 ore.
-
-Variabili: `DATABASE_URL` (stringa di connessione Neon), `CRON_SECRET` (password lunga per l'attività giornaliera).
+5 corridori e 30 checkpoint per gara; 5 gare create al giorno per rete e 500 attive (`CREATE_PER_DAY`, `MAX_ACTIVE_RACES`); 120 punti per richiesta, 30 richieste al minuto per corridore.
 
 ## Provarlo in locale
-
 ```bash
-npm test          # test automatici
+npm test          # test automatici (53)
 npm run dev       # ADMIN_KEY=dev, archivio in memoria, http://localhost:3000
 ```
 
 ## Pubblicarlo (gratis)
+1. **Upstash Redis**: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (prefisso chiavi `trail:`).
+2. **Neon**: `DATABASE_URL`; applica le migrazioni in `db/migrations/` (001–004, a mano).
+3. **Vercel**: importa il repository (ramo `main`) e imposta `ADMIN_KEY`, `REPORT_SECRET` (due password lunghe diverse), `CRON_SECRET` e le variabili sopra. Facoltative: `CREATE_PER_DAY`, `MAX_ACTIVE_RACES`.
+4. Cambiando dominio, aggiorna l'indirizzo del sito in `canonical`, `og:url`, `og:image`, `public/sitemap.xml`, `public/robots.txt` e nei dati strutturati di `public/index.html`.
 
-1. **Upstash Redis**: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`. Le chiavi hanno il prefisso `trail:` (variabile `REDIS_PREFIX`), quindi il database può essere condiviso con altri progetti.
-2. **Vercel**: importa il repository e imposta `ADMIN_KEY` e `REPORT_SECRET` (due password lunghe diverse) più le variabili Upstash e Neon. Il ramo di produzione è `main`.
-3. Apri `/crea` per creare una gara, `/admin` con `ADMIN_KEY` per amministrare tutte le gare.
+## Mappe e licenze (da rivalutare prima di aprire a molti utenti)
+Sorgenti in `public/js/config.js`: Esri World Imagery e OpenTopoMap con attribuzione, rilievo AWS Terrain Tiles, meteo Open-Meteo (CC BY 4.0, uso non commerciale). Vercel Hobby: solo uso non commerciale. Surfer è oggi gratuito e senza scopo di lucro; prima di un uso commerciale vedi `ROADMAP.md`.
 
-## Privacy e sicurezza
-- Il link è una credenziale: chi lo ha vede la gara. Il token sta dopo `#`, quindi non finisce nei log delle pagine né nei referrer.
-- Credenziale del corridore, link degli osservatori, indirizzo dell'organizzatore e chiave del gestore sono quattro cose distinte.
-- Dati personali ridotti al minimo: nome o pseudonimo, posizione durante il tracciamento, impronta dell'IP per un giorno.
-- Il corridore dà il consenso prima di iniziare e può interrompere in ogni momento. Per i minorenni serve un genitore.
-- Le pagine operative non sono indicizzabili; solo home e privacy lo sono.
-- Informativa in `/privacy`: è una bozza da far rivedere prima del lancio pubblico.
-
-## Mappe e licenze (da verificare prima dell'uso pubblico)
-Le sorgenti sono in `public/js/config.js`.
-- **Esri World Imagery**: controllare le condizioni d'uso.
-- **OpenTopoMap**: uso leggero con attribuzione.
-- **Rilievo 3D**: Terrain Tiles aperti su AWS.
-- **Open-Meteo**: gratuito per uso non commerciale; è una stima di modello.
-- **Vercel Hobby**: solo uso non commerciale.
+## Logo
+`public/logo-surfer.svg`: una «S» angolare con la stessa inclinazione e spessore della «W» di WizTrail, sul disco con le curve di livello, e un punto verde acqua che indica la posizione in diretta. Nel footer resta il simbolo bianco di WizTrail (`public/logo-mark.svg`).
 
 ## Stato
-- Provati con test automatici: API, gare multi-utente, link, scadenze, checkpoint, statistiche, filtri GPS, archivio, report, demo (40 test).
-- Pubblicati: landing (`/`), demo (`/demo`), creazione (`/crea`), gestione (`/gestisci`), report (`/report`), privacy e condizioni (bozze).
-- Provato sul campo: collegamento con Overland.
-- Da verificare: archivio su Neon con una gara vera, mappe e meteo in un browser reale, foto della landing su telefono e computer, frequenza di invio a schermo spento, carico con molti osservatori.
+- Provati con test automatici: API, gare multi-utente, link e scadenze, checkpoint, statistiche, filtri GPS, archivio, report, consenso, cancellazione, limiti (53 test).
+- Provato sul campo: Overland su iPhone (oltre 3 ore, stabile), prima dell'introduzione del consenso.
+- Da verificare: consenso con Overland su iPhone, archivio su Neon con una gara vera, mappe e meteo in produzione con la CSP, Android.
 
 ## Prossimi passi
-Vedi [`ROADMAP.md`](ROADMAP.md): rifinitura dei testi, creazione guidata con QR code e istruzioni per iPhone e Android, altre app di tracciamento, profilo personale, dashboard.
-
-## Fuori dalla versione attuale
-Cronometraggio ufficiale, smartwatch, frequenza cardiaca, storico GPS permanente.
+Vedi [`ROADMAP.md`](ROADMAP.md).
