@@ -46,6 +46,7 @@ Regola guida: la soluzione più semplice, gratuita e a basso rischio. Ordine di 
 Surfer è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe e aggiornare condizioni e privacy.
 
 ## Altre attività
+- Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-surfer.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
 - Landing: controllare le foto su telefono e computer; decidere se usare la foto dell'escursione; demo con percorso e checkpoint di esempio (citare l'organizzatore del tracciato o chiedere il permesso).
 - Checkpoint scelti direttamente sulla mappa.
 - Android a schermo spento: richiede un'app (vedi sopra).
