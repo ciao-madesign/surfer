@@ -36,6 +36,9 @@ Audit più profondo dopo i testi: percorsi completi (organizzatore, corridore, c
 ## 5b-bis. Decisione mappe
 Si tengono Esri World Imagery e OpenTopoMap con attribuzione (decisione di novembre 2026). Da rivalutare prima di aprire a molti utenti: condizioni Esri fuori da ArcGIS e carico su OpenTopoMap non verificati.
 
+## 5b-ter. Dati dopo la gara (decisione di novembre 2026)
+Su Neon restano per 3 giorni nome, tempi e statistiche (poi il cron li cancella): la privacy va aggiornata a 3 giorni. Verificato: su Neon nome e statistiche sono legati solo all'id del partecipante dentro la gara (generato alla creazione del codice di accesso), mai a indirizzo IP o a hash del token del dispositivo. L'IP compare solo come hash nel contatore anti-abuso di Redis (2 giorni, non collegato a gare o corridori) e nei log di Vercel. Da fare: hash IP con sale giornaliero (fase 4). Legame con profilo solo per chi è registrato (account_id).
+
 ## 5c. Prima di un eventuale uso commerciale
 Oggi Surfer è gratuito e senza scopo di lucro (lo dicono le condizioni). Prima di qualsiasi uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe (Esri, OpenTopoMap) e aggiornare condizioni e privacy.
 
