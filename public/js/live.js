@@ -121,11 +121,11 @@ function drawProfile() {
 function renderLive() {
   const d = state.live; if (!d) return;
   $('title').textContent = d.race.name;
-  $('updated').textContent = `Aggiornato alle ${fmtTime(d.serverTime)}`;
+  $('updated').textContent = `Pagina aggiornata alle ${fmtTime(d.serverTime)}`;
   if (state.ready) for (const p of d.participants) {
     if (!p.last) continue;
     let mk = state.markers[p.id];
-    const old = p.last.ageSec > 120;
+    const old = p.last.ageSec > 180;   // stessa soglia del server: oltre 3 minuti il segnale è vecchio
     if (!mk) {
       const e = el('div', { class: 'pin', style: `background:${p.color}` }, p.name.slice(0, 1).toUpperCase());
       mk = state.markers[p.id] = { el: e, m: new maplibregl.Marker({ element: e }).setLngLat([p.last.lon, p.last.lat]).addTo(state.map) };
@@ -138,23 +138,27 @@ function renderLive() {
   $('runners').replaceChildren(...d.participants.map((p) => runnerCard(p, byId[p.id])));
   drawProfile();
 }
+const openMore = new Set();   // «Più dati» resta aperto anche dopo l'aggiornamento
 function runnerCard(p, extra) {
   const s = extra?.stats, st = s && !s.insufficient ? s : null;
   const kpi = (label, value) => el('div', {}, label, el('b', {}, value));
   const card = el('div', { class: 'card runner' },
     el('div', {}, el('span', { class: 'dot', style: `background:${p.color}` }), el('span', { class: 'name' }, p.name),
       ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
-    el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `${fmtAge(p.last.ageSec)} · ${fmtTime(p.last.t)}` : 'in attesa del primo segnale'),
+    el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `Ultimo segnale ${fmtTime(p.last.t)} (${fmtAge(p.last.ageSec)})` : 'in attesa del primo segnale'),
     p.offCourseM != null && p.offCourseM > 300
       ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): stime sospese`)
       : p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');
   if (st) {
+    const eta = st.etaSuspended ? `sospeso: nessun segnale da ${Math.max(3, Math.round((st.signalAgeSec ?? 0) / 60))} min`
+      : st.etaAt ? `${fmtTime(st.etaAt)} (${st.reliability === 'Supported' ? 'indicativo' : 'dati scarsi'})` : '–';
     card.append(el('div', { class: 'stats', style: 'grid-column:1/3' },
-      kpi('Quota', `${st.ele} m`), kpi('D+ / D−', `${st.gain} / ${st.loss} m`),
-      kpi('Tempo', fmtDur(st.elapsedSec)), kpi('Velocità media', st.avgSpeedKmh != null ? `${st.avgSpeedKmh} km/h` : '–'),
-      kpi('Passo medio', fmtPace(st.avgPaceSecKm)), kpi('Ultimi 10 min', fmtPace(st.recentPaceSecKm)),
-      kpi('Salita', fmtPace(st.paceByGrade.salita)), kpi('Piano', fmtPace(st.paceByGrade.piano)), kpi('Discesa', fmtPace(st.paceByGrade.discesa)),
-      kpi('Arrivo stimato', st.etaAt ? `${fmtTime(st.etaAt)} (${st.reliability === 'Supported' ? 'indicativo' : 'dati scarsi'})` : '–')));
+      kpi('Arrivo stimato', eta), kpi('Tempo', fmtDur(st.elapsedSec)), kpi('Quota', `${st.ele} m`)),
+      el('details', { class: 'small', style: 'grid-column:1/3', open: openMore.has(p.id), ontoggle: (e) => { if (e.target.open) openMore.add(p.id); else openMore.delete(p.id); } }, el('summary', {}, 'Più dati'),
+        el('div', { class: 'stats' },
+          kpi('D+ / D−', `${st.gain} / ${st.loss} m`), kpi('Velocità media', st.avgSpeedKmh != null ? `${st.avgSpeedKmh} km/h` : '–'),
+          kpi('Passo medio', fmtPace(st.avgPaceSecKm)), kpi('Ultimi 10 min', fmtPace(st.recentPaceSecKm)),
+          kpi('Salita', fmtPace(st.paceByGrade.salita)), kpi('Piano', fmtPace(st.paceByGrade.piano)), kpi('Discesa', fmtPace(st.paceByGrade.discesa)))));
   }
   if (extra?.passages?.length) {
     const t = el('table', { style: 'grid-column:1/3;margin-top:6px' }, el('tr', {}, ...['Checkpoint', 'Ora', 'Dalla partenza', 'Dall\'ultimo'].map((h) => el('th', {}, h))));

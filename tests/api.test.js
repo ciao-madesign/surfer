@@ -98,7 +98,8 @@ test('validazione: coordinate, orari, dimensione batch', async () => {
   const r = await race(api);
   const n = clock.now();
   assert.equal((await send(api, r.dev, [{ t: n, lat: 99, lon: 8 }])).status, 400);
-  assert.equal((await send(api, r.dev, [{ t: n + 3600000, lat: 46, lon: 8 }])).status, 400);
+  const fut = await send(api, r.dev, [{ t: n + 3600000, lat: 46, lon: 8 }]);   // punto nel futuro: scartato, senza rifiutare l'invio
+  assert.equal(fut.status, 200); assert.equal(fut.json.accepted, 0); assert.equal(fut.json.rejected, 1);
   assert.equal((await send(api, r.dev, [{ t: 'ieri', lat: 46, lon: 8 }])).status, 400);
   assert.equal((await send(api, r.dev, Array.from({ length: 121 }, (_, i) => pt(n - i, 0)))).status, 400);
 });
@@ -569,4 +570,32 @@ test('link di chi segue: 15 giorni se la gara non parte, 7 dall\'avvio, 24 ore d
     await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
     clock.advance(23 * 3600000); assert.equal(await live(api, r), 200);
     clock.advance(2 * 3600000); assert.notEqual(await live(api, r), 200, 'dopo 25 ore dalla fine è scaduto'); }
+});
+
+test('stima d\'arrivo: sospesa dopo 3 minuti senza segnale, torna con il segnale', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const t0 = clock.now();
+  const pts = Array.from({ length: 21 }, (_, i) => pt(t0 + i * 60000, i * 0.2));
+  clock.advance(21 * 60000);
+  await send(api, r.dev, pts);
+  const st = async () => (await api('GET', '/api/stats', null, {}, { t: r.view })).json.participants[0].stats;
+  assert.ok((await st()).etaAt, 'con segnale recente la stima c\'è');
+  clock.advance(4 * 60000);
+  const s = await st();
+  assert.equal(s.etaAt, null); assert.equal(s.etaSuspended, true); assert.ok(s.signalAgeSec >= 240);
+  await send(api, r.dev, [pt(clock.now(), 4.2)]);
+  assert.ok((await st()).etaAt, 'col segnale la stima ritorna');
+});
+
+test('invio: un punto troppo vecchio non fa rifiutare gli altri; due invii insieme non si sovrappongono', async () => {
+  const { api, clock, store } = setup();
+  const r = await race(api);
+  const n = clock.now();
+  const res = await send(api, r.dev, [pt(n - 25 * 3600000, 0.1), pt(n, 0.2)]);
+  assert.equal(res.status, 200); assert.equal(res.json.accepted, 1); assert.equal(res.json.rejected, 1);
+  const k = (await store.cmd(['SMEMBERS', 'races']))[0];
+  await store.cmd(['SET', `lock:${k}:${r.pid}`, '1', 'NX', 'EX', 15]);   // un altro invio è in corso
+  assert.equal((await send(api, r.dev, [pt(n + 1000, 0.3)])).status, 429);
 });

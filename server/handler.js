@@ -11,7 +11,8 @@ const SAFETY_TTL = 3 * DAY;          // rete di sicurezza: posizioni GPS di gare
 const DRAFT_TTL = 15 * DAY;          // gara non avviata: link e bozza durano 15 giorni dalla creazione
 const LIVE_TTL = 7 * DAY;            // gara avviata e mai chiusa: 7 giorni dall'avvio (poi 24 ore dopo la fine)
 const MAX_PARTICIPANTS = 5;
-const MAX_HISTORY = 4000;
+const MAX_HISTORY = 9000;     // punti per corridore: copre le 36 ore di una gara a un punto ogni 15 s
+const STALE_MS = 180000;      // senza segnale oltre 3 minuti: stato «senza connessione» e stima d'arrivo sospesa
 const MAX_BATCH = 120;
 const RATE_PER_MIN = 30;
 const ANON_REPORT_DAYS = 3;  // gare senza profilo: tempi e statistiche restano 3 giorni
@@ -117,7 +118,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     if (m.status === 'ended') return 'finished';
     if (last.status === 'paused') return 'paused';
     if (last.status === 'no_gps') return 'no_gps';
-    if (now() - last.rcv > 180000) return 'offline';
+    if (now() - last.rcv > STALE_MS) return 'offline';
     return m.status === 'live' ? 'tracking' : 'waiting';
   }
 
@@ -398,14 +399,25 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
 
     const m = await loadRace(ref.raceId);
     if (m.status === 'ended') throw new HttpError(410, 'Gara conclusa');
+    // una sola richiesta alla volta per corridore: evita che due invii ravvicinati si sovrascrivano
+    const lock = `lock:${m.id}:${ref.pid}`;
+    if (!(await store.cmd(['SET', lock, '1', 'NX', 'EX', 15]))) throw new HttpError(429, 'Invio già in corso, riprova');
+    try {
     const status = ['tracking', 'paused', 'no_gps'].includes(body?.status) ? body.status : 'tracking';
     const raw = Array.isArray(body?.points) ? body.points : [];
     if (raw.length > MAX_BATCH) throw bad(`Massimo ${MAX_BATCH} punti per richiesta`);
     if (!raw.every((p) => p && typeof p === 'object')) throw bad('Punto non valido');
 
     const t = now();
-    const pts = raw.map((p) => ({
-      t: num(p.t, t - DAY * 1000, t + 120000, 't'),
+    // un punto troppo vecchio o nel futuro viene scartato, senza rifiutare l'intero invio
+    let stale = 0;
+    const usable = raw.filter((p) => {
+      if (typeof p.t !== 'number' || !isFinite(p.t)) throw bad('t non valido');
+      if (p.t < t - DAY * 1000 || p.t > t + 120000) { stale++; return false; }
+      return true;
+    });
+    const pts = usable.map((p) => ({
+      t: p.t,
       lat: num(p.lat, -90, 90, 'lat'), lon: num(p.lon, -180, 180, 'lon'),
       ele: p.ele == null ? null : num(p.ele, -500, 9000, 'quota'),
       acc: p.acc == null ? null : num(p.acc, 0, 100000, 'precisione'),
@@ -424,7 +436,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
 
     const rows = [], writes = [];
     let km = last?.km ?? 0, fin = !!last?.fin, lastPt = last, off = last?.off ?? null;
-    let anom = last?.anom ?? 0, progAnom = last?.panom ?? 0, rejected = 0;
+    let anom = last?.anom ?? 0, progAnom = last?.panom ?? 0, rejected = stale;
     for (const p of fresh) {
       // 1) campioni inutilizzabili: precisione pessima, oppure salto di posizione impossibile
       if (p.acc != null && p.acc > MAX_ACC) { rejected++; continue; }
@@ -467,6 +479,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     await store.pipeline(ops);
     console.log(JSON.stringify({ ev: 'ingest', race: m.id, p: ref.pid, got: pts.length, new: rows.length, rej: rejected, st: status }));
     return { ok: true, accepted: rows.length, rejected, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
+    } finally { await store.cmd(['DEL', lock]); }
   }
   // App "Overland" (iOS, App Store, gratuita): invia lotti GeoJSON a un indirizzo. Il token del dispositivo
   // può stare nell'indirizzo (?token=) o nell'intestazione Authorization. Risposta attesa: {"result":"ok"}.
@@ -516,11 +529,20 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const m = await viewer(query, headers);
     const course = await loadCourse(m.id);
     if (!course) return { participants: [], note: 'Nessuna traccia caricata' };
-    const reads = await store.pipeline([['HGETALL', k.pass(m.id)], ...m.participants.map((p) => ['LRANGE', k.pos(m.id, p.id), 0, -1])]);
+    const reads = await store.pipeline([['HGETALL', k.pass(m.id)], ...m.participants.map((p) => ['LRANGE', k.pos(m.id, p.id), 0, -1]), ['HGETALL', k.last(m.id)]]);
     const pass = toObj(reads[0]);
+    const lastAll = toObj(reads[m.participants.length + 1]);
     const out = m.participants.map((p, i) => {
       const rows = reads[i + 1].map(decodePoint);
       const s = rows.length ? runnerStats(course, rows, m.startedAt, now()) : { insufficient: true };
+      // senza segnale recente la stima d'arrivo non è credibile: viene sospesa (e torna da sola)
+      const l = lastAll[p.id] ? JSON.parse(lastAll[p.id]) : null;
+      if (m.status === 'live' && l && !l.fin && !s.insufficient) {
+        const age = l.t != null ? now() - l.t : Infinity;
+        if (participantStatus(m, l) !== 'tracking' || age > STALE_MS) {
+          s.etaSec = null; s.etaAt = null; s.etaSuspended = true; s.signalAgeSec = isFinite(age) ? Math.round(age / 1000) : null;
+        }
+      }
       let prev = m.startedAt;
       const passages = m.checkpoints.filter((c) => pass[`${c.id}:${p.id}`]).map((c) => {
         const tt = Number(pass[`${c.id}:${p.id}`]);
