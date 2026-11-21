@@ -121,6 +121,7 @@ function sLink() {
   }) }, label);
   return el('section', { class: 'card' }, el('h2', {}, 'Il link per chi ti segue'),
     el('p', { class: 'small muted' }, 'Mandalo a chi vuole seguirti. Nessuna app, nessun account.'),
+    el('p', { class: 'small muted' }, 'Funziona fino a 24 ore dopo la fine della gara.'),
     url ? el('div', {}, qr(url), el('div', { class: 'secret' }, url),
       el('div', { class: 'row' }, el('button', { class: 'primary', onclick: () => share(race.name, url) }, 'Condividi'), el('button', { onclick: () => copy(url) }, 'Copia link')))
       : race.hasLink ? el('p', { class: 'small muted' }, 'Link già creato. Per rivederlo, creane uno nuovo.') : '',

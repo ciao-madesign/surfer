@@ -548,3 +548,25 @@ test('report: senza REPORT_SECRET dedicato i report sono disattivati (non usa la
   const r = await h({ method: 'GET', path: '/api/report', headers: {}, query: { t: 'x.y' }, origin: 'https://x.test' });
   assert.equal(r.status, 401);
 });
+
+test('link di chi segue: 15 giorni se la gara non parte, 7 dall\'avvio, 24 ore dopo la fine', async () => {
+  const D = 86400000;
+  const live = (api, r) => api('GET', '/api/live', null, {}, { t: r.view }).then((x) => x.status);
+  // non avviata: vale 15 giorni dalla creazione
+  { const { api, clock } = setup(); const r = await race(api);
+    clock.advance(14 * D); assert.equal(await live(api, r), 200);
+    clock.advance(2 * D); assert.equal(await live(api, r), 401, 'dopo 16 giorni è scaduto'); }
+  // avviata e dimenticata: 7 giorni dall'avvio (anche se creata 10 giorni prima)
+  { const { api, clock } = setup(); const r = await race(api);
+    clock.advance(10 * D);
+    await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+    clock.advance(6 * D); assert.equal(await live(api, r), 200);
+    clock.advance(2 * D); assert.equal(await live(api, r), 401, 'dopo 8 giorni dall\'avvio è scaduto'); }
+  // conclusa: 24 ore dopo la fine
+  { const { api, clock } = setup(); const r = await race(api);
+    await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+    clock.advance(3 * 3600000);
+    await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+    clock.advance(23 * 3600000); assert.equal(await live(api, r), 200);
+    clock.advance(2 * 3600000); assert.notEqual(await live(api, r), 200, 'dopo 25 ore dalla fine è scaduto'); }
+});

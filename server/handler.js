@@ -7,7 +7,9 @@ import { demoCourse, demoLive, demoStats } from './demo.js';
 
 const DAY = 86400;
 const KEEP_AFTER_END = DAY;          // 24 ore dalla fine della gara
-const SAFETY_TTL = 3 * DAY;          // rete di sicurezza: dati di gare mai chiuse
+const SAFETY_TTL = 3 * DAY;          // rete di sicurezza: posizioni GPS di gare mai chiuse e archiviazioni da ripetere
+const DRAFT_TTL = 15 * DAY;          // gara non avviata: link e bozza durano 15 giorni dalla creazione
+const LIVE_TTL = 7 * DAY;            // gara avviata e mai chiusa: 7 giorni dall'avvio (poi 24 ore dopo la fine)
 const MAX_PARTICIPANTS = 5;
 const MAX_HISTORY = 4000;
 const MAX_BATCH = 120;
@@ -39,7 +41,13 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     if (!allowExpired && m.status === 'ended' && now() > m.endedAt + KEEP_AFTER_END * 1000) throw new HttpError(410, 'Dati scaduti');
     return m;
   }
-  const saveRace = (m, ttl = SAFETY_TTL) => store.cmd(['SET', k.race(m.id), JSON.stringify(m), 'EX', ttl]);
+  // Durata di gara, link e chiavi collegate: dipende dalla fase (stesse regole per il link di chi segue).
+  const lifeTtl = (m) => {
+    const end = m.status === 'ended' ? m.endedAt + KEEP_AFTER_END * 1000
+      : m.status === 'live' ? (m.startedAt ?? now()) + LIVE_TTL * 1000 : m.createdAt + DRAFT_TTL * 1000;
+    return Math.max(60, Math.ceil((end - now()) / 1000));
+  };
+  const saveRace = (m, ttl = lifeTtl(m)) => store.cmd(['SET', k.race(m.id), JSON.stringify(m), 'EX', ttl]);
 
   async function loadCourse(id) {
     const c = courseCache.get(id);
@@ -138,8 +146,8 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     if (withOrganizer) { orgToken = token(24); meta.orgHash = sha256(orgToken); }
     await saveRace(meta);
     const ops = [['SADD', 'races', id]];
-    if (course) ops.push(['SET', k.course(id), JSON.stringify(course), 'EX', SAFETY_TTL]);
-    if (orgToken) ops.push(['SET', k.org(meta.orgHash), id, 'EX', SAFETY_TTL]);
+    if (course) ops.push(['SET', k.course(id), JSON.stringify(course), 'EX', DRAFT_TTL]);
+    if (orgToken) ops.push(['SET', k.org(meta.orgHash), id, 'EX', DRAFT_TTL]);
     await store.pipeline(ops);
     return { race: pubMeta(meta), course: course && { totalKm: course.totalKm, gain: course.gain, loss: course.loss },
       ...(orgToken ? { organizerToken: orgToken, organizerPath: `/gestisci#${orgToken}` } : {}) };
@@ -206,7 +214,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
         deviceHash: sha256(dev) };
       m.participants.push(p);
       await saveRace(m);
-      await store.cmd(['SET', k.dev(p.deviceHash), JSON.stringify({ raceId: m.id, pid }), 'EX', SAFETY_TTL]);
+      await store.cmd(['SET', k.dev(p.deviceHash), JSON.stringify({ raceId: m.id, pid }), 'EX', lifeTtl(m)]);
       const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
       return { participant: pubParticipant(p), deviceToken: dev, pairing };  // il token si vede una sola volta
     }
@@ -217,7 +225,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       const dev = token(24), oldHash = p.deviceHash;
       p.deviceHash = sha256(dev);
       await saveRace(m);
-      await store.pipeline([['SET', k.dev(p.deviceHash), JSON.stringify({ raceId: m.id, pid: p.id }), 'EX', SAFETY_TTL], ['DEL', k.dev(oldHash)]]);
+      await store.pipeline([['SET', k.dev(p.deviceHash), JSON.stringify({ raceId: m.id, pid: p.id }), 'EX', lifeTtl(m)], ['DEL', k.dev(oldHash)]]);
       const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
       return { participant: pubParticipant(p), deviceToken: dev, pairing };
     }
@@ -231,7 +239,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     }
     if (sub === 'link') {
       if (method === 'POST') {
-        const ttl = Math.min(168, Math.max(1, Number(body?.ttlHours) || 72)) * 3600;
+        const ttl = lifeTtl(m);   // il link dura quanto la gara: fino a 24 ore dopo la fine
         const t = token(24), h = sha256(t);
         const ops = [['SET', k.view(h), m.id, 'EX', ttl]];
         if (m.viewHash) ops.push(['DEL', k.view(m.viewHash)]);   // il vecchio link smette di funzionare
@@ -247,7 +255,10 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     }
     if ((sub === 'start' || sub === 'end') && method === 'POST') {
       if (m.status === 'ended') throw bad('Gara già conclusa');
-      if (sub === 'start') { m.status = 'live'; m.startedAt = m.startedAt ?? now(); await saveRace(m); }
+      if (sub === 'start') {
+        m.status = 'live'; m.startedAt = m.startedAt ?? now(); await saveRace(m);
+        await expireRace(m, lifeTtl(m));   // la durata passa a 7 giorni dall'avvio, anche per link e chiavi già create
+      }
       else await endRace(m);
       return { race: pubMeta(m) };
     }
@@ -317,6 +328,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const ttl = m.archive?.state === 'pending' ? SAFETY_TTL : Math.max(60, left);
     await saveRace(m, ttl);
     await expireRace(m, ttl);
+    if (m.viewHash) await store.cmd(['EXPIRE', k.view(m.viewHash), Math.max(60, left)]);   // il link di chi segue cade 24 ore dopo la fine, anche se il report è in attesa
     await store.cmd([m.archive?.state === 'pending' ? 'SADD' : 'SREM', 'archq', m.id]);
   }
 
