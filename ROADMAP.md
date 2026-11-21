@@ -42,6 +42,13 @@ Su Neon restano per 3 giorni nome, tempi e statistiche (poi il cron li cancella)
 ## 5c. Prima di un eventuale uso commerciale
 Oggi Surfer è gratuito e senza scopo di lucro (lo dicono le condizioni). Prima di qualsiasi uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe (Esri, OpenTopoMap) e aggiornare condizioni e privacy.
 
+## 5d. Da fare prima del lancio pubblico
+- Verificare per iscritto la regione del database Upstash (la privacy cita Francoforte solo per Vercel e Neon).
+- Verificare la retention dei log di Vercel e dei backup di Neon e Upstash.
+- Sostituire il contatto con una casella dedicata (oggi cia.madesign@gmail.com).
+- Far rivedere privacy, condizioni e `docs/pre-dpia.md` da un legale o DPO.
+- Prova su iPhone con Overland dopo la fase 5: il corridore deve aprire il suo link e dare il consenso, altrimenti le posizioni non vengono accettate.
+
 ## 6. Un solo dominio con WizTrail
 Obiettivo: evitare due domini separati.
 - Strada consigliata: stesso dominio, due progetti Vercel. WizTrail inoltra a Surfer un percorso (regola di rinvio); i due progetti si pubblicano separatamente.
