@@ -130,6 +130,26 @@ Invece di affidarsi a Overland o al browser, il tracking lo fa un'app nostra per
 - Notifiche vere («la gara parte tra 15 minuti, attiva il tracking»).
 - Base per le app su orologio (Apple Watch, Wear OS).
 
+**Permessi: non serve «sempre»**
+Se il corridore preme «Avvia» con l'app aperta, basta il permesso «mentre usi l'app»:
+- iPhone: il tracking continua a schermo spento, con l'indicatore blu della posizione in alto.
+- Android: l'app mostra una notifica fissa («Surfer sta registrando la gara») e continua a funzionare.
+
+Meno problemi con l'approvazione degli store e più fiducia da parte del corridore.
+
+**Solo per i corridori**
+Spettatori e organizzatori restano sul sito, senza installare nulla: è il punto di forza del progetto. Anche per il corridore il tracker da browser resta come alternativa.
+
+**Come costruirla**
+
+| Strada | Impegno | Note |
+|---|---|---|
+| Sito esistente impacchettato in un'app (Capacitor) + modulo nativo per il GPS | Basso | Riusa le pagine attuali; nativa è solo la parte del GPS. Adatta a un progetto senza framework |
+| App multipiattaforma (React Native, Flutter) | Medio | Più «app vera», ma l'interfaccia va riscritta |
+| Due app native (Swift e Kotlin) | Alto | Massimo controllo, doppio lavoro. In `ios/` c'è già una bozza Swift |
+
+Consiglio: la prima strada.
+
 **Limiti che restano**
 - Il GPS non si accende da solo all'ora del via: il corridore tocca comunque «Avvia», ma la notifica lo ricorda.
 - Su Android alcune marche (Xiaomi, Huawei, Samsung) chiudono le app in background: servono guide dedicate per marca.
@@ -140,7 +160,9 @@ Invece di affidarsi a Overland o al browser, il tracking lo fa un'app nostra per
 - Manutenzione: ogni anno iOS e Android cambiano le regole sulla posizione; senza aggiornamenti l'app smette di funzionare.
 - Privacy: dati uguali a oggi, ma la responsabilità diventa interamente nostra.
 
-**Quando farla**: dopo che le gare aperte hanno un utilizzo reale. Browser e Overland restano come alternativa per chi non vuole installare nulla.
+**Quando farla**
+1. Prima: Traccar Client (iPhone e Android, una sola guida) e OwnTracks (configurazione con un link) come alternative a Overland, subito disponibili e quasi a costo zero. Per Android anche OsmAnd e Locus Map, spesso già installate (invio verso Surfer da verificare).
+2. Poi: l'app Surfer, quando le gare aperte hanno un utilizzo reale. Diventa l'unica app consigliata; le altre restano per chi le usa già.
 
 ## Percorso consigliato (a fasi)
 
