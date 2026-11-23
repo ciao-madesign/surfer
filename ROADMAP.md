@@ -52,6 +52,9 @@ Rimandato (con motivo):
 ## Prima di un eventuale uso commerciale
 Surfer è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe e aggiornare condizioni e privacy.
 
+## Gare aperte (valutate)
+Valutazione e piano del primo passo (iscrizione autonoma, fino a 20 corridori) in `docs/proposta-gare-aperte.md`. Rimandati: pubblicità, Garmin, app nostra, Cloudflare, gruppi, mappa pubblica.
+
 ## Altre attività
 - Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-surfer.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
 - Landing: controllare le foto su telefono e computer; decidere se usare la foto dell'escursione; demo con percorso e checkpoint di esempio (citare l'organizzatore del tracciato o chiedere il permesso).

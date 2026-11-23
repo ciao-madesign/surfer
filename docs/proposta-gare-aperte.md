@@ -1,6 +1,50 @@
 # Proposta: gare aperte con iscrizione dei corridori
 
-Stato: idea per sviluppo futuro. Nessuna modifica al codice.
+Stato: idea per sviluppo futuro, con valutazione di novembre 2026 (sotto). Nessuna modifica al codice.
+
+## Valutazione (novembre 2026)
+
+**Giudizio**: buona direzione di lungo periodo, ma troppo grande per essere un'evoluzione immediata. Si fa un primo passo piccolo, si misura, e il resto si rimanda.
+
+**Cosa funziona**
+- Dice con onestà che il «Via» non accende il GPS dei telefoni.
+- L'iscrizione autonoma si adatta bene al consenso: è il corridore ad agire e a dare il consenso; l'organizzatore non deve più configurare ogni telefono.
+- L'ordine in fasi è sensato.
+
+**Cosa cambia davvero**
+1. **Privacy e legge**: con molte persone e iscrizione pubblica la DPIA diventa probabilmente obbligatoria (vedi `docs/pre-dpia.md`). Revisione legale prima di aprire, non dopo.
+2. **«Gratis» non regge su larga scala**: ogni invio costa circa 10–15 comandi Redis; una gara da 200 corridori supera i 500.000 comandi mensili del piano gratuito di Upstash. Costo basso (pochi euro), ma non più zero.
+3. **Pubblicità**: contraddice «senza cookie» e rende il progetto commerciale (fuori da Vercel Hobby). Sconsigliata; gli sponsor diretti senza tracciamento sono compatibili.
+4. **Limiti attuali non adatti a un evento**: 120 richieste al minuto per rete (sul Wi-Fi della griglia di partenza bloccherebbe i corridori), tetto di 5 corridori nel codice, risposta `live` in cache per link (con un link per gruppo serve la «fotografia unica»).
+5. **Garmin MapShare**: non verificato, i termini d'uso per terzi vanno controllati; invia una posizione ogni 2–10 minuti mentre Surfer dà «senza connessione» dopo 3: servirebbe una soglia per sorgente.
+6. **App nostra**: impegno e manutenzione sottostimati; l'approvazione degli store per la posizione in background è difficile.
+
+**Da rimandare**: pubblicità, Garmin, app nostra, Cloudflare, mappa pubblica, gruppi.
+
+## Primo passo: iscrizione autonoma (piano)
+
+Obiettivo: il corridore si iscrive da solo con un link, dà il consenso e riceve il proprio tracker. Nessun gruppo, nessuna nuova infrastruttura; tetto da 5 a 20 corridori.
+
+**Decisioni da prendere prima di iniziare**
+1. Tetto di corridori per gara aperta (proposta: 20).
+2. Chi segue: un solo link di gara che mostra tutti (proposta, semplice) oppure un link per corridore (più lavoro, rimandato).
+3. Iscrizioni: aperte con tetto (proposta) o con approvazione dell'organizzatore.
+4. Minori: dichiarazione già presente nel consenso (14 anni o genitore); nessuna iscrizione per conto di altri nel primo passo.
+
+**Interventi, in ordine (senza sovrapposizioni)**
+| # | Intervento | File | Note |
+|---|---|---|---|
+| 1 | Tetto di corridori per gara configurabile (oggi fisso a 5) e UI di gestione per 20 righe | `server/config.js`, `races.js`, `public/js/gestisci.js` | Solo numeri e layout; nessun cambio ai dati |
+| 2 | Le richieste dei corridori (`device/*`) non contano nel limite per rete, ma restano limitate per corridore e per credenziale errata | `server/handler.js` | Serve prima di tutto il resto: il Wi-Fi della griglia |
+| 3 | Link di iscrizione dell'organizzatore (si crea, si disattiva, si rigenera), salvato come hash | `server/races.js`, `server/repo.js` | Stesso schema del link di visualizzazione |
+| 4 | `POST /api/enroll` con token di iscrizione: crea il corridore, registra il consenso, restituisce il codice una sola volta; limite per rete; tetto rispettato | `server/races.js` | Il consenso è dato nello stesso gesto |
+| 5 | Pagina `/iscriviti#token`: nome, consenso, poi QR/link del tracker e istruzioni iPhone/Android | `public/iscriviti.html`, `public/js/iscriviti.js` | Riusa testi e componenti di `/track` e `/gestisci` |
+| 6 | Pannello organizzatore: link di iscrizione, elenco, stato «pronto», rimozione, «Via» | `public/js/gestisci.js` | Già in gran parte presente |
+| 7 | Privacy e condizioni: iscrizione autonoma, ruolo dell'organizzatore, chi vede cosa | `public/privacy.html`, `public/condizioni.html` | Per ultimo, dopo il codice |
+| 8 | Test (iscrizione, tetto, consenso, limiti), documentazione in `docs/API.md` | `tests/`, `docs/` | Ogni intervento con i suoi test |
+
+**Prima di aprirlo al pubblico**: revisione legale, misura reale del consumo Redis con una gara vera, controllo dei termini dei servizi gratuiti.
+**Criterio di completamento**: un'iscrizione di prova da iPhone e una da un altro telefono, con consenso registrato, tracker collegato e corridore visibile a chi segue; test automatici verdi.
 
 ## L'idea in breve
 
@@ -23,7 +67,7 @@ Il valore: tracking live per gare piccole senza noleggiare tracker GPS. Il costo
 **Buona.** Gran parte esiste già:
 
 - gare, GPX, checkpoint, link separati per corridore e per chi guarda;
-- avvio gara: i punti prima del «Via» vengono già ignorati, quindi il comando dell'organizzatore esiste già lato server;
+- avvio gara: il comando dell'organizzatore esiste già lato server. I punti prima del «Via» però non vengono scartati: sono salvati e mostrati, e contano solo per i checkpoint e per il tempo di gara;
 - controllo «Segnale ricevuto ✓» per corridore;
 - app Overland (schermo spento) e tracker da browser.
 
@@ -37,7 +81,7 @@ Approccio consigliato, più semplice e affidabile:
 
 1. I corridori accendono il tracking **prima** della partenza (in griglia, 10–15 minuti prima).
 2. Il pannello dell'organizzatore mostra chi è «pronto» (segnale ricevuto) e chi no.
-3. L'organizzatore preme «Via»: da quel momento i punti contano. Quelli precedenti vengono scartati (già oggi).
+3. L'organizzatore preme «Via»: da quel momento i punti contano. Quelli precedenti restano visibili ma non contano per checkpoint e tempo (oggi; scartarli del tutto è una scelta da fare).
 4. L'avviso «accendi il tracking» parte in automatico X minuti prima dell'orario di partenza, non al «Via».
 
 ### Come avvisare i corridori
