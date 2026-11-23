@@ -10,7 +10,6 @@
 <path d="M-10 60C30 30 70 70 110 45S165 25 200 40"/><path d="M-10 82C32 52 72 92 112 66S168 46 200 62"/>
 <ellipse cx="96" cy="96" rx="78" ry="56" transform="rotate(-20 96 96)"/><ellipse cx="96" cy="96" rx="54" ry="38" transform="rotate(-20 96 96)"/>
 </g>
-<path d="M146 52L56 62C40 64 44 84 60 90L132 112C150 118 150 138 132 140L44 150" transform="rotate(-4 96 96)" fill="none" stroke="#fff" stroke-width="26" stroke-linejoin="miter"/>
-<circle cx="154" cy="46" r="13" fill="#4fd1c5"/>
+<path d="M150 54L116 80L90 46L50 82L142 116L98 150L70 122L38 152" fill="none" stroke="#fff" stroke-width="22" stroke-linejoin="miter" stroke-miterlimit="10"/>
 </g>
 </svg>
