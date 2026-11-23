@@ -5,6 +5,8 @@
 //   saveRace(summary) -> { ok, counts }   scrittura atomica e ripetibile (nessun duplicato se si ripete)
 //   getRace(id)       -> summary | null
 //   purgeExpired(ms)  -> numero di gare eliminate
+//   deleteRace(id) / deleteParticipant(raceId, pid) -> cancellazione su richiesta (gara o singolo corridore)
+//   setReportSalt(id, salt) -> cambia la firma del link al report (il vecchio link smette di funzionare)
 //
 // summary = { id, name, accountId|null, startedAt, endedAt, totalKm, course|null, expiresAt|null,
 //   checkpoints: [{ idx, name, km, radius }],
@@ -31,6 +33,12 @@ export function memoryArchive() {
       return { ok: same(counts, countsOf(s)), counts };
     },
     async getRace(id) { const r = races.get(id); return r ? structuredClone(r) : null; },
+    async deleteRace(id) { return races.delete(id) ? 1 : 0; },
+    async deleteParticipant(raceId, pid) {
+      const r = races.get(raceId); if (!r) return 0;
+      const n = r.participants.length; r.participants = r.participants.filter((p) => p.id !== pid); return n - r.participants.length;
+    },
+    async setReportSalt(id, salt) { const r = races.get(id); if (r) r.reportSalt = salt; return r ? 1 : 0; },
     async purgeExpired(ms) {
       let n = 0;
       for (const [id, r] of races) if (r.expiresAt != null && r.expiresAt < ms) { races.delete(id); n++; }
@@ -63,13 +71,13 @@ export function neonArchive(databaseUrl) {
       // Una sola transazione: o si scrive tutto o niente. Ripetibile: prima si svuotano i figli della gara.
       await sql.transaction((tx) => [
         tx.query(
-          `INSERT INTO races (id, account_id, name, status, course, total_km, started_at, ended_at, archived_at, expires_at, meta)
-           VALUES ($1, $2, $3, 'ended', $4::jsonb, $5, $6, $7, now(), $8, $9::jsonb)
+          `INSERT INTO races (id, account_id, name, status, course, total_km, started_at, ended_at, archived_at, expires_at, meta, report_salt)
+           VALUES ($1, $2, $3, 'ended', $4::jsonb, $5, $6, $7, now(), $8, $9::jsonb, $10)
            ON CONFLICT (id) DO UPDATE SET account_id = EXCLUDED.account_id, name = EXCLUDED.name, status = 'ended',
              course = EXCLUDED.course, total_km = EXCLUDED.total_km, started_at = EXCLUDED.started_at,
-             ended_at = EXCLUDED.ended_at, archived_at = now(), expires_at = EXCLUDED.expires_at, meta = EXCLUDED.meta`,
+             ended_at = EXCLUDED.ended_at, archived_at = now(), expires_at = EXCLUDED.expires_at, meta = EXCLUDED.meta, report_salt = EXCLUDED.report_salt`,
           [s.id, s.accountId ?? null, s.name, s.course ? JSON.stringify(s.course) : null, s.totalKm ?? null,
-            ts(s.startedAt), ts(s.endedAt), ts(s.expiresAt), s.meta ? JSON.stringify(s.meta) : null]),
+            ts(s.startedAt), ts(s.endedAt), ts(s.expiresAt), s.meta ? JSON.stringify(s.meta) : null, s.reportSalt ?? null]),
         tx.query('DELETE FROM participants WHERE race_id = $1', [s.id]),   // elimina a cascata anche i passaggi
         tx.query('DELETE FROM checkpoints WHERE race_id = $1', [s.id]),
         tx.query(
@@ -78,10 +86,10 @@ export function neonArchive(databaseUrl) {
           [s.id, s.checkpoints.map((c) => c.idx), s.checkpoints.map((c) => c.name), s.checkpoints.map((c) => c.km),
             s.checkpoints.map((c) => c.radius)]),
         tx.query(
-          `INSERT INTO participants (id, race_id, name, color, stats)
-           SELECT a, $1, b, c, d::jsonb FROM unnest($2::text[], $3::text[], $4::text[], $5::text[]) AS t(a, b, c, d)`,
+          `INSERT INTO participants (id, race_id, name, color, stats, consent_at, consent_version)
+           SELECT a, $1, b, c, d::jsonb, to_timestamp(e / 1000.0), f FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::float8[], $7::text[]) AS t(a, b, c, d, e, f)`,
           [s.id, ps.map((p) => dbId(s.id, p.id)), ps.map((p) => p.name), ps.map((p) => p.color ?? null),
-            ps.map((p) => (p.stats ? JSON.stringify(p.stats) : null))]),
+            ps.map((p) => (p.stats ? JSON.stringify(p.stats) : null)), ps.map((p) => p.consentAt ?? null), ps.map((p) => p.consentVersion ?? null)]),
         tx.query(
           `INSERT INTO passages (race_id, participant_id, cp_idx, t)
            SELECT $1, a, b, to_timestamp(c / 1000.0) FROM unnest($2::text[], $3::int[], $4::float8[]) AS t(a, b, c)`,
@@ -93,7 +101,7 @@ export function neonArchive(databaseUrl) {
     async getRace(id) {
       const sql = await db();
       const [rows, cps, parts, pass] = await sql.transaction((tx) => [
-        tx.query('SELECT id, name, account_id, total_km, course, meta, extract(epoch FROM started_at) * 1000 AS started, extract(epoch FROM ended_at) * 1000 AS ended, extract(epoch FROM expires_at) * 1000 AS expires FROM races WHERE id = $1', [id]),
+        tx.query('SELECT id, name, account_id, total_km, course, meta, report_salt, extract(epoch FROM started_at) * 1000 AS started, extract(epoch FROM ended_at) * 1000 AS ended, extract(epoch FROM expires_at) * 1000 AS expires FROM races WHERE id = $1', [id]),
         tx.query('SELECT idx, name, km, radius FROM checkpoints WHERE race_id = $1 ORDER BY idx', [id]),
         tx.query('SELECT id, name, color, stats FROM participants WHERE race_id = $1 ORDER BY id', [id]),
         tx.query('SELECT participant_id, cp_idx, extract(epoch FROM t) * 1000 AS t FROM passages WHERE race_id = $1 ORDER BY cp_idx', [id]),
@@ -101,13 +109,28 @@ export function neonArchive(databaseUrl) {
       const r = rows[0];
       if (!r) return null;
       return {
-        id: r.id, name: r.name, accountId: r.account_id, totalKm: r.total_km, course: r.course, meta: r.meta,
+        id: r.id, name: r.name, accountId: r.account_id, totalKm: r.total_km, course: r.course, meta: r.meta, reportSalt: r.report_salt,
         startedAt: r.started == null ? null : Math.round(r.started), endedAt: r.ended == null ? null : Math.round(r.ended),
         expiresAt: r.expires == null ? null : Math.round(r.expires),
         checkpoints: cps.map((c) => ({ idx: c.idx, name: c.name, km: c.km, radius: c.radius })),
         participants: parts.map((p) => ({ id: p.id.slice(id.length + 1), name: p.name, color: p.color, stats: p.stats,
           passages: pass.filter((x) => x.participant_id === p.id).map((x) => ({ cp: x.cp_idx, t: Math.round(x.t) })) })),
       };
+    },
+    async deleteRace(id) {
+      const sql = await db();
+      const rows = await sql.query('DELETE FROM races WHERE id = $1 RETURNING id', [id]);   // i figli si cancellano a cascata
+      return rows.length;
+    },
+    async deleteParticipant(raceId, pid) {
+      const sql = await db();
+      const rows = await sql.query('DELETE FROM participants WHERE id = $1 AND race_id = $2 RETURNING id', [dbId(raceId, pid), raceId]);
+      return rows.length;
+    },
+    async setReportSalt(id, salt) {
+      const sql = await db();
+      const rows = await sql.query('UPDATE races SET report_salt = $2 WHERE id = $1 RETURNING id', [id, salt]);
+      return rows.length;
     },
     async purgeExpired(ms) {
       const sql = await db();

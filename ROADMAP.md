@@ -1,34 +1,56 @@
 # Prossimi passi
 
-Ordine indicativo. Regola guida: la soluzione più semplice, gratuita e a basso rischio.
+Regola guida: la soluzione più semplice, gratuita e a basso rischio. Ordine di priorità: privacy e sicurezza, flussi, modularità e portabilità, integrazioni.
 
-## 1. Landing e testi
-- Rivedere i testi uno alla volta (microcopy) con il responsabile del progetto.
-- Controllare le foto su telefono e computer; decidere se usare la foto dell'escursione (non ancora inserita).
-- Demo: percorso e checkpoint di esempio. Citare l'organizzatore del tracciato o chiedere il permesso; sostituire i ristori generici.
-- Sostituire l'indirizzo email di contatto con una casella dedicata.
+## Fatto (audit di novembre 2026, fasi 0–6)
+- Ritocchi UX e accessibilità; validazioni, regione UE, attribuzione meteo; segreto del report dedicato.
+- Dati live: storico più lungo, invii non sovrapposti, stima d'arrivo sospesa dopo 3 minuti senza segnale, «Ultimo segnale» per corridore, tessere ridotte.
+- Scadenza link: 24 ore dopo la fine; 7 giorni dall'avvio; 15 giorni se la gara non parte.
+- Cancellazione completa (anche su Neon), link del report revocabile, diritti del corridore (`/api/device/me`).
+- Limiti anti-abuso, hash IP con sale giornaliero, token solo nell'indirizzo.
+- Consenso esplicito del corridore (browser e Overland), non retroattivo, registrato su Neon.
+- Privacy e condizioni allineate, pre-DPIA (`docs/pre-dpia.md`), CSP e Permissions-Policy.
+- SEO di base e nuovo logo.
 
-## 2. Creazione guidata
-Fatto (`/gestisci`): percorso in 4 passi (corridori, collegamento telefoni con QR code, link per chi segue con QR e pulsante Condividi, avvio), istruzioni separate per iPhone e Android, controllo «Segnale ricevuto ✓» per ogni corridore.
-Da fare:
-- Provarlo sul campo con un telefono vero (iPhone e Android): QR, permessi di posizione, comportamento a schermo spento.
-- Android a schermo spento: aggiungere un'app (vedi punto 3).
-- Rivedere i testi di `/crea` e `/gestisci` (rifinitura finale di UX).
+## Basi per gli sviluppi futuri: a che punto siamo
+
+| Sviluppo | Base già pronta | Cosa manca |
+|---|---|---|
+| Altre app di tracciamento (OsmAnd/Traccar, OwnTracks, GPSLogger) | Funzione di invio unica con validazioni, consenso, limiti, token del corridore; adattatore Overland già scritto come modello | Un piccolo adattatore per formato (stesso schema di `overland()`), guida per Android |
+| Profilo personale e dashboard | Tabelle `accounts`, `races.account_id`, scadenze per profilo nello schema; cancellazione e consenso già agganciati ai dati | Nessun flusso di profilo: chiave/email, dashboard, conferme, DPIA completa |
+| API stabile / app ufficiali | Interfacce `store` e `archive` separate; handler indipendente da Vercel | Prefisso `/api/v1` con alias, documentazione dell'API, esportazione JSON/GPX |
+| Portabilità (altri hosting, Cloudflare, self-hosting) | Handler senza dipendenze da Vercel, archivio dietro interfaccia | I comandi Redis sono ancora nell'handler: serve un'interfaccia di dominio e una suite di test comune per store e archive |
+| Un solo dominio con WizTrail | Nessun vincolo tecnico; pagine su percorsi propri | Decisione su percorso o sottodominio (sezione 6) |
+| Scalare | Cache CDN per chi guarda, limiti, archivio ripetibile | Misurare i comandi Redis con una gara vera; cache per istanza |
+
+## Fase 7 (dopo la beta)
+1. **Interfaccia dello store**: nessun comando Redis nell'handler; poi suddividere in 6 file (`http`, `races`, `ingest`, `finish`, `store`, `archive`) a test verdi. Suite di conformità comune per store e archive.
+2. `endRace` asincrono, esportazione JSON/GPX, runner di migrazioni, cache per istanza per ridurre i comandi Upstash.
+3. `/api/v1` con alias dei percorsi attuali; documentazione dell'API.
+4. Adattatori OsmAnd/Traccar, poi OwnTracks, poi GPSLogger, con guida breve per Android.
+5. Link di gestione rigenerabile; anteprima «come lo vede chi segue».
+6. Rinviare: Cloudflare, app native, integrazioni con Strava/Garmin/Apple/Health Connect, LoRa.
+
+## Da fare prima del lancio pubblico
+- Prova su iPhone con Overland: il corridore apre il suo link, dà il consenso, poi parte l'app.
+- Controllare in produzione mappe, meteo e pagine con la CSP; provare l'archivio su Neon con una gara vera.
+- Verificare per iscritto la regione del database Upstash (la privacy cita Francoforte solo per Vercel e Neon).
+- Verificare la retention dei log di Vercel e dei backup di Neon e Upstash.
+- Sostituire il contatto con una casella dedicata (oggi ciao.madesign@gmail.com).
+- Far rivedere privacy, condizioni e `docs/pre-dpia.md` da un legale o DPO.
+- Rivalutare le licenze delle mappe (Esri, OpenTopoMap) e i limiti dei servizi gratuiti.
+- Confermare l'opacità della trama di sfondo (`public/css/app.css`, oggi 9%).
+- Cambiando dominio: aggiornare canonical, `og:url`, `og:image`, sitemap, robots e dati strutturati.
+
+## Prima di un eventuale uso commerciale
+Surfer è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe e aggiornare condizioni e privacy.
+
+## Altre attività
+- Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-surfer.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
+- Landing: controllare le foto su telefono e computer; decidere se usare la foto dell'escursione; demo con percorso e checkpoint di esempio (citare l'organizzatore del tracciato o chiedere il permesso).
 - Checkpoint scelti direttamente sulla mappa.
-
-## 3. Altre app di tracciamento
-Traccar, OwnTracks, GPSLogger (oltre a browser e Overland), con una breve guida per ciascuna.
-
-## 4. Profilo personale e dashboard
-- Con chiave (senza registrazione): scade dopo 90 giorni senza accesso, massimo 1 anno.
-- Con email: conferma dopo 1 anno, altrimenti eliminazione a 1 anno + 60 giorni.
-- Dashboard «Le mie gare» con storico dei report. Sul database restano solo tempi, statistiche e (per i profili) il percorso; lo storico GPS completo resta su Redis e si cancella dopo 24 ore.
-
-## 5. Verifiche prima dell'apertura al pubblico
-- Prova completa dell'archivio su Neon con una gara vera.
-- Informativa privacy e condizioni: revisione da parte di un professionista.
-- Licenze: Esri, OpenTopoMap, Open-Meteo, Vercel Hobby (uso non commerciale).
-- Integrazione con WizTrail: da studiare.
+- Android a schermo spento: richiede un'app (vedi sopra).
+- Profilo con chiave (scade dopo 90 giorni senza accesso, massimo 1 anno) o con email (conferma dopo 1 anno, eliminazione a 1 anno + 60 giorni) e dashboard «Le mie gare»: sul database solo tempi, statistiche e, per i profili, il percorso.
 
 ## 6. Un solo dominio con WizTrail
 Obiettivo: evitare due domini separati.
@@ -36,6 +58,9 @@ Obiettivo: evitare due domini separati.
 - Alternativa: un solo progetto Vercel. Più ordinato, ma sul piano gratuito c'è un limite di funzioni serverless e vanno fusi archivi e attività programmate.
 - Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/surfer/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
 
+## Decisioni prese
+- Mappe: si tengono Esri World Imagery e OpenTopoMap con attribuzione (da rivalutare prima di aprire a molti utenti).
+- Dati dopo la gara: su Neon nome, tempi, statistiche e consenso restano 3 giorni, legati solo all'id del partecipante nella gara (mai a IP o dispositivo); l'IP compare solo come hash con sale giornaliero nel contatore anti-abuso (2 giorni) e nei log di Vercel.
+
 ## Fuori dalla versione attuale
-Cronometraggio ufficiale, smartwatch, frequenza cardiaca, storico GPS permanente.
-- Trama di sfondo (`public/css/app.css`, opacity): ora 9%, da confermare prima del go-live.
+Cronometraggio ufficiale, smartwatch, frequenza cardiaca, storico GPS permanente, SOS, classifiche, social.

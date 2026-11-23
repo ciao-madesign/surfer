@@ -1,4 +1,7 @@
 {
+  "regions": [
+    "fra1"
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -60,11 +63,19 @@
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://server.arcgisonline.com https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://s3.amazonaws.com https://images.unsplash.com; connect-src 'self' https://server.arcgisonline.com https://a.tile.opentopomap.org https://b.tile.opentopomap.org https://s3.amazonaws.com https://api.open-meteo.com https://api.open-elevation.com; worker-src 'self' blob:; child-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; form-action 'self'; base-uri 'self'; object-src 'none'"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(self), screen-wake-lock=(self), camera=(), microphone=(), payment=()"
         }
       ]
     },
     {
-      "source": "/((?!privacy|demo|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|robots\\.txt|$).*)",
+      "source": "/((?!privacy|demo|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|logo-surfer\\.svg|favicon\\.svg|apple-touch-icon\\.png|og-image\\.png|sitemap\\.xml|robots\\.txt|$).*)",
       "headers": [
         {
           "key": "X-Robots-Tag",

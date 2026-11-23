@@ -84,7 +84,7 @@ export function demoLive(now) {
       const s = state(r, c);
       const status = c.elapsedSec < 5 * 60 ? 'waiting' : s.done ? 'finished' : 'tracking';
       return { id: r.id, name: r.name, color: r.color, status,
-        statusLabel: { waiting: 'In attesa', tracking: 'Tracking attivo', finished: 'Gara conclusa' }[status],
+        statusLabel: { waiting: 'In attesa', tracking: 'Segnale attivo', finished: 'Gara conclusa' }[status],
         last: { t: c.simNow - 15000, lat: s.pos[0], lon: s.pos[1], ele: Math.round(s.pos[2]), ageSec: 15 },
         offCourseM: 0, distKm: Math.round(s.km * 100) / 100, remainingKm: Math.round(Math.max(0, course.totalKm - s.km) * 100) / 100 };
     }),

@@ -12,7 +12,7 @@ function setup() {
   let t = Date.parse('2026-11-14T08:00:00Z');
   const clock = { now: () => t, advance: (ms) => { t += ms; } };
   const store = createStore({}, clock.now);
-  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto' }, now: clock.now });
+  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto', REPORT_SECRET: 'segreto-report' }, now: clock.now });
   const api = async (method, path, body, headers = {}, query = {}) =>
     handle({ method, path, body, headers, query, origin: 'https://x.test' });
   return { clock, store, api };
@@ -20,11 +20,12 @@ function setup() {
 
 async function race(api, extra = {}) {
   const r = await api('POST', '/api/admin/races', { name: 'Trail di prova', course: { points: COURSE },
-    checkpoints: [{ name: 'Ristoro', lat: at(5)[0], lon: 8 }], ...extra }, ADMIN);
+    checkpoints: [{ name: 'Ristoro', lat: at(5)[0], lon: 8 }], ...(({ noConsent, ...rest }) => rest)(extra) }, ADMIN);
   assert.equal(r.status, 200, JSON.stringify(r.json));
   const id = r.json.race.id;
   const p = await api('POST', `/api/admin/races/${id}/participants`, { name: 'Anna' }, ADMIN);
   const link = await api('POST', `/api/admin/races/${id}/link`, {}, ADMIN);
+  if (!extra.noConsent) await api('POST', '/api/device/consent', { accept: true, ageOk: true }, { authorization: `Bearer ${p.json.deviceToken}` });
   return { id, dev: p.json.deviceToken, pid: p.json.participant.id, view: link.json.token, pairing: p.json.pairing };
 }
 const send = (api, dev, points, status) =>
@@ -98,7 +99,8 @@ test('validazione: coordinate, orari, dimensione batch', async () => {
   const r = await race(api);
   const n = clock.now();
   assert.equal((await send(api, r.dev, [{ t: n, lat: 99, lon: 8 }])).status, 400);
-  assert.equal((await send(api, r.dev, [{ t: n + 3600000, lat: 46, lon: 8 }])).status, 400);
+  const fut = await send(api, r.dev, [{ t: n + 3600000, lat: 46, lon: 8 }]);   // punto nel futuro: scartato, senza rifiutare l'invio
+  assert.equal(fut.status, 200); assert.equal(fut.json.accepted, 0); assert.equal(fut.json.rejected, 1);
   assert.equal((await send(api, r.dev, [{ t: 'ieri', lat: 46, lon: 8 }])).status, 400);
   assert.equal((await send(api, r.dev, Array.from({ length: 121 }, (_, i) => pt(n - i, 0)))).status, 400);
 });
@@ -384,7 +386,7 @@ function setupArchive(extra = {}, archive = memoryArchive()) {
   let t = Date.parse('2026-11-14T08:00:00Z');
   const clock = { now: () => t, advance: (ms) => { t += ms; } };
   const store = createStore({}, clock.now);
-  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto', ARCHIVE_RETRY_MS: '0', CRON_SECRET: 'cron', ...extra }, now: clock.now, archive });
+  const handle = createHandler({ store, env: { ADMIN_KEY: 'segreto', ARCHIVE_RETRY_MS: '0', CRON_SECRET: 'cron', REPORT_SECRET: 'segreto-report', ...extra }, now: clock.now, archive });
   const api = async (method, path, body, headers = {}, query = {}) => handle({ method, path, body, headers, query, origin: 'https://x.test' });
   return { clock, store, api, archive };
 }
@@ -505,7 +507,9 @@ test('report: link firmato, leggibile finché l\'archivio lo conserva, senza tra
   assert.equal((await api('GET', '/api/report', null, {}, { t: t.slice(0, -1) + 'x' })).status, 401);
   assert.equal((await api('GET', '/api/report', null, {}, { t: 'x.y' })).status, 401);
   assert.equal((await api('GET', '/api/report', null, {}, {})).status, 401);
-  assert.equal((await api('GET', '/api/report', null, {}, { t: `altra.${t.split('.')[1]}` })).status, 401, 'la firma vale solo per la propria gara');
+  assert.equal((await api('GET', '/api/report', null, {}, { t: `altra.${t.split('.')[1]}` })).status, 404, 'gara inesistente');
+  const id = t.split('.')[0];
+  assert.equal((await api('GET', '/api/report', null, {}, { t: `${id}.${'0'.repeat(32)}` })).status, 401, 'la firma vale solo per la propria gara');
 });
 
 test('report: scade con l\'archivio (3 giorni senza profilo)', async () => {
@@ -529,4 +533,167 @@ test('gara di esempio: dati simulati coerenti, senza credenziali né scritture',
   const st = await api('GET', '/api/demo/stats');
   assert.equal(st.json.participants.length, 3);
   assert.equal((await store.cmd(['SMEMBERS', 'races'])).length, 0, 'la demo non crea nulla nell\'archivio');
+});
+
+test('input malformati: 400 e non 500', async () => {
+  const { api } = setup();
+  const r = await race(api);
+  assert.equal((await send(api, r.dev, [null])).status, 400);
+  assert.equal((await send(api, r.dev, ['x'])).status, 400);
+  const bad = await api('POST', '/api/admin/races', { name: 'x', course: { points: COURSE }, checkpoints: [null] }, ADMIN);
+  assert.equal(bad.status, 400);
+  const pa = await api('POST', `/api/admin/races/${r.id}/passage`, { checkpointId: 'c1', participantId: r.pid, t: 'ieri' }, ADMIN);
+  assert.equal(pa.status, 400);
+});
+
+test('report: senza REPORT_SECRET dedicato i report sono disattivati (non usa la chiave admin)', async () => {
+  const store = createStore({});
+  const h = createHandler({ store, env: { ADMIN_KEY: 'segreto' } });
+  const r = await h({ method: 'GET', path: '/api/report', headers: {}, query: { t: 'x.y' }, origin: 'https://x.test' });
+  assert.equal(r.status, 401);
+});
+
+test('link di chi segue: 15 giorni se la gara non parte, 7 dall\'avvio, 24 ore dopo la fine', async () => {
+  const D = 86400000;
+  const live = (api, r) => api('GET', '/api/live', null, {}, { t: r.view }).then((x) => x.status);
+  // non avviata: vale 15 giorni dalla creazione
+  { const { api, clock } = setup(); const r = await race(api);
+    clock.advance(14 * D); assert.equal(await live(api, r), 200);
+    clock.advance(2 * D); assert.equal(await live(api, r), 401, 'dopo 16 giorni è scaduto'); }
+  // avviata e dimenticata: 7 giorni dall'avvio (anche se creata 10 giorni prima)
+  { const { api, clock } = setup(); const r = await race(api);
+    clock.advance(10 * D);
+    await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+    clock.advance(6 * D); assert.equal(await live(api, r), 200);
+    clock.advance(2 * D); assert.equal(await live(api, r), 401, 'dopo 8 giorni dall\'avvio è scaduto'); }
+  // conclusa: 24 ore dopo la fine
+  { const { api, clock } = setup(); const r = await race(api);
+    await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+    clock.advance(3 * 3600000);
+    await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+    clock.advance(23 * 3600000); assert.equal(await live(api, r), 200);
+    clock.advance(2 * 3600000); assert.notEqual(await live(api, r), 200, 'dopo 25 ore dalla fine è scaduto'); }
+});
+
+test('stima d\'arrivo: sospesa dopo 3 minuti senza segnale, torna con il segnale', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const t0 = clock.now();
+  const pts = Array.from({ length: 21 }, (_, i) => pt(t0 + i * 60000, i * 0.2));
+  clock.advance(21 * 60000);
+  await send(api, r.dev, pts);
+  const st = async () => (await api('GET', '/api/stats', null, {}, { t: r.view })).json.participants[0].stats;
+  assert.ok((await st()).etaAt, 'con segnale recente la stima c\'è');
+  clock.advance(4 * 60000);
+  const s = await st();
+  assert.equal(s.etaAt, null); assert.equal(s.etaSuspended, true); assert.ok(s.signalAgeSec >= 240);
+  await send(api, r.dev, [pt(clock.now(), 4.2)]);
+  assert.ok((await st()).etaAt, 'col segnale la stima ritorna');
+});
+
+test('invio: un punto troppo vecchio non fa rifiutare gli altri; due invii insieme non si sovrappongono', async () => {
+  const { api, clock, store } = setup();
+  const r = await race(api);
+  const n = clock.now();
+  const res = await send(api, r.dev, [pt(n - 25 * 3600000, 0.1), pt(n, 0.2)]);
+  assert.equal(res.status, 200); assert.equal(res.json.accepted, 1); assert.equal(res.json.rejected, 1);
+  const k = (await store.cmd(['SMEMBERS', 'races']))[0];
+  await store.cmd(['SET', `lock:${k}:${r.pid}`, '1', 'NX', 'EX', 15]);   // un altro invio è in corso
+  assert.equal((await send(api, r.dev, [pt(n + 1000, 0.3)])).status, 429);
+});
+
+test('cancellazione: eliminare la gara cancella anche l\'archivio e il link al report', async () => {
+  const { api, clock, archive } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const end = await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  const t = end.json.race.reportPath.split('#')[1];
+  assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 200);
+  assert.equal((await api('DELETE', `/api/admin/races/${r.id}`, null, ADMIN)).status, 200);
+  assert.equal(await archive.getRace(r.id), null);
+  assert.equal((await api('GET', '/api/report', null, {}, { t })).status, 404);
+});
+
+test('cancellazione: l\'organizzatore toglie un corridore anche dall\'archivio', async () => {
+  const { api, clock, archive } = setupArchive();
+  const r = await finishedRace(api, clock);
+  await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  assert.equal((await archive.getRace(r.id)).participants.length, 1);
+  assert.equal((await api('DELETE', `/api/admin/races/${r.id}/participants/${r.pid}`, null, ADMIN)).status, 200);
+  assert.equal((await archive.getRace(r.id)).participants.length, 0);
+});
+
+test('report: nuovo link, il vecchio smette di funzionare', async () => {
+  const { api, clock } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const old = (await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN)).json.race.reportPath.split('#')[1];
+  const nuovo = (await api('POST', `/api/admin/races/${r.id}/report`, {}, ADMIN)).json.reportPath.split('#')[1];
+  assert.notEqual(old, nuovo);
+  assert.equal((await api('GET', '/api/report', null, {}, { t: old })).status, 401);
+  assert.equal((await api('GET', '/api/report', null, {}, { t: nuovo })).status, 200);
+});
+
+test('diritti del corridore: vede i propri dati e li cancella con il proprio codice', async () => {
+  const { api, clock } = setupArchive();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  await api('POST', '/api/device/positions', { points: [pt(clock.now(), 0.1)] }, { authorization: `Bearer ${r.dev}` });
+  const auth = { authorization: `Bearer ${r.dev}` };
+  const me = await api('GET', '/api/device/me', null, auth);
+  assert.equal(me.status, 200); assert.equal(me.json.name, 'Anna'); assert.equal(me.json.points, 1);
+  assert.equal((await api('GET', '/api/device/me', null, { authorization: 'Bearer sbagliato-sbagliato-sbagliato' })).status, 401);
+  assert.equal((await api('DELETE', '/api/device/me', null, auth)).status, 200);
+  assert.equal((await api('GET', '/api/device/me', null, auth)).status, 401, 'il codice non vale più');
+  const live = await api('GET', '/api/live', null, {}, { t: r.view });
+  assert.equal(live.json.participants.length, 0);
+});
+
+test('limiti: tentativi con credenziali sbagliate e troppe richieste dalla stessa rete', async () => {
+  const { api } = setup();
+  let last;
+  for (let i = 0; i < 25; i++) last = await api('GET', '/api/live', null, {}, { t: 'x'.repeat(30) });
+  assert.equal(last.status, 429, 'dopo una ventina di accessi sbagliati la rete viene fermata');
+  const { api: api2 } = setup();
+  const r = await race(api2);
+  let st = 0;
+  for (let i = 0; i < 125; i++) st = (await api2('GET', '/api/live', null, {}, { t: r.view })).status;
+  assert.equal(st, 429, 'oltre 120 richieste al minuto da una rete');
+  const { api: api3, clock } = setup();
+  const r3 = await race(api3);
+  assert.equal((await api3('GET', '/api/live', null, {}, { t: r3.view })).status, 200);
+  clock.advance(61000);
+  assert.equal((await api3('GET', '/api/live', null, {}, { t: r3.view })).status, 200, 'il limite si azzera dopo un minuto');
+});
+
+test('cache: parametri in più e intestazione del token non sono accettati', async () => {
+  const { api } = setup();
+  const r = await race(api);
+  assert.equal((await api('GET', '/api/live', null, {}, { t: r.view, x: '1' })).status, 400);
+  assert.equal((await api('GET', '/api/live', null, { 'x-view-token': r.view })).status, 401);
+});
+
+test('consenso: senza il gesto del corridore le posizioni non vengono accettate e non valgono punti precedenti', async () => {
+  const { api, clock } = setup();
+  const r = await race(api, { noConsent: true });
+  const auth = { authorization: `Bearer ${r.dev}` };
+  assert.equal((await send(api, r.dev, [pt(clock.now(), 0.1)])).status, 403);
+  assert.equal((await api('POST', '/api/device/consent', { accept: true }, auth)).status, 400, 'serve anche la conferma dell\'età');
+  assert.equal((await api('POST', '/api/device/consent', {}, auth)).status, 400);
+  const before = clock.now();
+  clock.advance(60000);
+  assert.equal((await api('POST', '/api/device/consent', { accept: true, ageOk: true }, auth)).status, 200);
+  const res = await send(api, r.dev, [pt(before, 0.1), pt(clock.now() + 1000, 0.2)]);
+  assert.equal(res.status, 200); assert.equal(res.json.accepted, 1, 'il punto precedente al consenso è scartato');
+  const me = (await api('GET', '/api/device/me', null, auth)).json;
+  assert.equal(me.consent, true);
+});
+
+test('consenso: data e versione vanno nell\'archivio ma non nel report pubblico', async () => {
+  const { api, clock, archive } = setupArchive();
+  const r = await finishedRace(api, clock);
+  const end = await api('POST', `/api/admin/races/${r.id}/end`, {}, ADMIN);
+  const s = await archive.getRace(r.id);
+  assert.ok(s.participants[0].consentAt > 0); assert.equal(s.participants[0].consentVersion, '1');
+  const rep = await api('GET', '/api/report', null, {}, { t: end.json.race.reportPath.split('#')[1] });
+  assert.equal(rep.json.participants[0].consentAt, undefined);
 });

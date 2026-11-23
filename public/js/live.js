@@ -29,6 +29,7 @@ function fatal(title, msg) {
   $('fatal').style.display = 'block'; $('fatal-t').textContent = title; $('fatal-m').textContent = msg;
   for (const id of ['map', 'panel', 'ctl']) { const n = $(id); if (n) n.style.display = 'none'; }
 }
+const DUR = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
 function banner(msg) { const b = $('banner'); b.style.display = msg ? 'block' : 'none'; b.textContent = msg || ''; }
 
 // ---------- mappa ----------
@@ -70,15 +71,15 @@ function fit() {
   c.points.forEach((p) => b.extend([p[1], p[0]]));
   if (DEMO) {   // demo: un po' più vicino, per distinguere i corridori
     const cam = state.map.cameraForBounds(b, { padding: 30 });
-    if (cam) return state.map.easeTo({ center: cam.center, zoom: cam.zoom + 0.8, duration: 600 });
+    if (cam) return state.map.easeTo({ center: cam.center, zoom: cam.zoom + 0.8, duration: DUR });
   }
-  state.map.fitBounds(b, { padding: 40, duration: 600, pitch: state.is3d ? 60 : 0 });
+  state.map.fitBounds(b, { padding: 40, duration: DUR, pitch: state.is3d ? 60 : 0 });
 }
 function set3d(on) {
   state.is3d = on; $('b3d').textContent = on ? '2D' : '3D';
   const m = state.map;
-  if (on) { m.setTerrain({ source: 'dem', exaggeration: 1.3 }); m.easeTo({ pitch: 65, duration: 600 }); }
-  else { m.setTerrain(null); m.easeTo({ pitch: 0, bearing: 0, duration: 600 }); }
+  if (on) { m.setTerrain({ source: 'dem', exaggeration: 1.3 }); m.easeTo({ pitch: 65, duration: DUR }); }
+  else { m.setTerrain(null); m.easeTo({ pitch: 0, bearing: 0, duration: DUR }); }
 }
 $('b3d').onclick = () => state.ready && set3d(!state.is3d);
 $('bfit').onclick = () => state.ready && fit();
@@ -87,12 +88,12 @@ $('brun').onclick = () => {      // inquadra tutti i corridori (anche se lontani
   if (!state.ready || !pts.length) return;
   const b = new maplibregl.LngLatBounds();
   pts.forEach((p) => b.extend([p.last.lon, p.last.lat]));
-  state.map.fitBounds(b, { padding: 60, maxZoom: 15, duration: 600 });
+  state.map.fitBounds(b, { padding: 60, maxZoom: 15, duration: DUR });
 };
 $('bbase').onclick = () => {
   if (!state.ready) return;
   state.base = state.base === 'sat' ? 'topo' : 'sat';
-  $('bbase').textContent = state.base === 'sat' ? 'Topografica' : 'Satellite';
+  $('bbase').textContent = state.base === 'sat' ? 'Mappa' : 'Satellite';
   state.map.setStyle(style(state.base));
   state.map.once('styledata', () => { addCourse(); if (state.is3d) state.map.setTerrain({ source: 'dem', exaggeration: 1.3 }); });
 };
@@ -125,11 +126,11 @@ function drawProfile() {
 function renderLive() {
   const d = state.live; if (!d) return;
   $('title').textContent = d.race.name;
-  $('updated').textContent = `agg. ${fmtTime(d.serverTime)}`;
+  $('updated').textContent = `Pagina aggiornata alle ${fmtTime(d.serverTime)}`;
   if (state.ready) for (const p of d.participants) {
     if (!p.last) continue;
     let mk = state.markers[p.id];
-    const old = p.last.ageSec > 120;
+    const old = p.last.ageSec > 180;   // stessa soglia del server: oltre 3 minuti il segnale è vecchio
     if (!mk) {
       const e = el('div', { class: 'pin', style: `background:${p.color}` }, p.name.slice(0, 1).toUpperCase());
       mk = state.markers[p.id] = { el: e, m: new maplibregl.Marker({ element: e }).setLngLat([p.last.lon, p.last.lat]).addTo(state.map) };
@@ -142,7 +143,7 @@ function renderLive() {
   $('runners').replaceChildren(...d.participants.map((p) => runnerCard(p, byId[p.id])));
   drawProfile();
 }
-const openMore = new Set();   // i «Dettagli» aperti restano aperti a ogni aggiornamento
+const openMore = new Set();   // «Più dati» resta aperto anche dopo l'aggiornamento
 function runnerCard(p, extra) {
   const s = extra?.stats, st = s && !s.insufficient ? s : null;
   const kpi = (label, value) => el('div', {}, label, el('b', {}, value));
@@ -150,22 +151,23 @@ function runnerCard(p, extra) {
     el('div', { class: 'head' },
       el('div', {}, el('span', { class: 'dot', style: `background:${p.color}` }), el('span', { class: 'name' }, p.name),
         ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
-      el('div', { class: 'small muted' }, p.last ? `${fmtAge(p.last.ageSec)} · ${fmtTime(p.last.t)}` : 'nessun dato')));
+      el('div', { class: 'small muted' }, p.last ? `Ultimo segnale ${fmtTime(p.last.t)} (${fmtAge(p.last.ageSec)})` : 'in attesa del primo segnale')));
   const off = p.offCourseM != null && p.offCourseM > 300;
-  if (off) card.append(el('div', { class: 'small bad', style: 'margin-top:4px' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): tempi e stime sospesi`));
+  if (off) card.append(el('div', { class: 'small bad', style: 'margin-top:4px' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): stime sospese`));
+  const eta = st ? (st.etaSuspended ? 'sospeso' : st.etaAt ? fmtTime(st.etaAt) : '–') : '–';
   if (!off && p.distKm != null) {
     card.append(el('div', { class: 'key' },
-      kpi('Percorsi', `${p.distKm.toFixed(1)} km`), kpi('All\'arrivo', `${p.remainingKm.toFixed(1)} km`),
-      kpi('Arrivo stimato', st?.etaAt ? fmtTime(st.etaAt) : '–')));
+      kpi('Percorsi', `${p.distKm.toFixed(1)} km`), kpi('All\'arrivo', `${p.remainingKm.toFixed(1)} km`), kpi('Arrivo stimato', eta)));
   }
   const rest = [];
   if (st) {
+    if (st.etaSuspended) rest.push(el('p', { class: 'small muted', style: 'margin:8px 0 0' }, `Arrivo stimato sospeso: nessun segnale da ${Math.max(3, Math.round((st.signalAgeSec ?? 0) / 60))} min.`));
+    else if (st.etaAt) rest.push(el('p', { class: 'small muted', style: 'margin:8px 0 0' }, `Arrivo stimato ${st.reliability === 'Supported' ? 'indicativo' : 'con pochi dati: da prendere con cautela'}.`));
     rest.push(el('div', { class: 'stats' },
       kpi('Tempo', fmtDur(st.elapsedSec)), kpi('Quota', `${st.ele} m`), kpi('D+ / D−', `${st.gain} / ${st.loss} m`),
       kpi('Velocità media', st.avgSpeedKmh != null ? `${st.avgSpeedKmh} km/h` : '–'),
       kpi('Passo medio', fmtPace(st.avgPaceSecKm)), kpi('Ultimi 10 min', fmtPace(st.recentPaceSecKm)),
       kpi('Salita', fmtPace(st.paceByGrade.salita)), kpi('Piano', fmtPace(st.paceByGrade.piano)), kpi('Discesa', fmtPace(st.paceByGrade.discesa))));
-    if (st.etaAt) rest.push(el('p', { class: 'small muted', style: 'margin:8px 0 0' }, `Arrivo stimato ${st.reliability === 'Supported' ? 'indicativo' : 'con pochi dati: da prendere con cautela'}.`));
   }
   if (extra?.passages?.length) {
     const t = el('table', {}, el('tr', {}, ...['Checkpoint', 'Ora', 'Dalla partenza', 'Dall\'ultimo'].map((h) => el('th', {}, h))));
@@ -173,9 +175,8 @@ function runnerCard(p, extra) {
     rest.push(t);
   }
   if (rest.length) {
-    const d = el('details', { class: 'more', open: openMore.has(p.id), ontoggle: () => { if (d.open) openMore.add(p.id); else openMore.delete(p.id); } },
-      el('summary', {}, 'Dettagli'), ...rest);
-    card.append(d);
+    card.append(el('details', { class: 'more', open: openMore.has(p.id), ontoggle: (e) => { if (e.target.open) openMore.add(p.id); else openMore.delete(p.id); } },
+      el('summary', {}, 'Più dati'), ...rest));
   }
   return card;
 }
@@ -203,13 +204,13 @@ async function pollLive() {
   try {
     state.live = await api('live'); lastOk = Date.now(); banner('');
     if (state.live.race.status === 'ended') {
-      banner('Gara conclusa. Le posizioni restano visibili per 24 ore. ');
-      if (state.live.race.reportPath) { const a = document.createElement('a'); a.href = state.live.race.reportPath; a.textContent = 'Apri il report della gara'; $('banner').append(a); }
+      banner('Gara finita. Le posizioni restano visibili per 24 ore. ');
+      if (state.live.race.reportPath) { const a = document.createElement('a'); a.href = state.live.race.reportPath; a.textContent = 'Vedi il report'; $('banner').append(a); }
     }
     renderLive();
   } catch (e) {
     if (e.status === 401 || e.status === 410) return fatal(e.status === 410 ? 'Dati scaduti' : 'Link non valido', e.status === 410 ? 'Questa gara è conclusa e i dati sono stati cancellati.' : 'Il link è errato, revocato o scaduto. Chiedi un nuovo link all\'organizzatore.');
-    banner(`Connessione assente. Ultimo aggiornamento alle ${lastOk ? fmtTime(lastOk) : '–'}.`);
+    banner(`Nessuna connessione. Ultimo aggiornamento alle ${lastOk ? fmtTime(lastOk) : '–'}.`);
   }
 }
 async function pollStats() { try { state.stats = await api('stats'); renderLive(); } catch { /* resta l'ultimo valore */ } }

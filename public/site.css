@@ -25,5 +25,6 @@ details.faq p{color:var(--wt-muted);margin:8px 0 0}
 footer.foot{border-top:1px solid var(--wt-border);padding:20px 0 32px;color:var(--wt-muted);font-size:var(--wt-size-small)}
 footer.foot .fam{display:flex;align-items:center;gap:10px;margin-bottom:10px}
 footer.foot .fam img{width:28px;height:28px;border-radius:7px}
+footer.foot .fam img[src$='logo-mark.svg']{height:auto;border-radius:0;opacity:.9}
 footer.foot a{color:var(--wt-teal)}
 .prose{max-width:720px}.prose h2{margin-top:28px}.prose p,.prose li{color:var(--wt-muted)}

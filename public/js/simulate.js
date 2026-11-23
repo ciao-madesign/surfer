@@ -26,6 +26,8 @@ $('go').onclick = async () => {
     const course = (await res.json()).course;
     if (!course) throw new Error('La gara non ha una traccia');
     const speed = Number($('kmh').value) / 3.6, accel = Number($('acc').value);   // m/s
+    // simulazione: il corridore "finto" dà il consenso automaticamente
+    await fetch(`${location.origin}/api/device/consent`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${p.t}` }, body: JSON.stringify({ accept: true, ageOk: true }) });
     const t0 = Date.now();
     let sent = 0, buffer = [], lastSend = 0;
     $('go').disabled = true; $('stop').disabled = false;

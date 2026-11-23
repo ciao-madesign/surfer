@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<title>Surfer · Live · Crea la tua gara</title>
-<link rel="icon" href="/logo-mark.svg">
+<title>Surfer · Live · Crea gara</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/css/fonts.css">
 <link rel="stylesheet" href="/css/colors_and_type.css">
 <link rel="stylesheet" href="/css/app.css">
@@ -21,7 +21,7 @@ label{margin-top:16px}
 #msg.err{display:block}
 .file{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .file input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.file .btn{display:inline-flex;align-items:center;min-height:40px;padding:8px 12px;border-radius:8px;border:1px solid var(--wt-border);background:var(--wt-panel);cursor:pointer;margin:0;color:var(--wt-ink);font-size:inherit}
+.file .btn{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border-radius:8px;border:1px solid var(--wt-border);background:var(--wt-panel);cursor:pointer;margin:0;color:var(--wt-ink);font-size:inherit}
 .file .btn:hover{border-color:var(--wt-teal)}
 .file:focus-within .btn{outline:2px solid var(--wt-teal);outline-offset:2px}
 #fname{font-size:var(--wt-size-small);color:var(--wt-muted)}
@@ -35,8 +35,8 @@ textarea{width:100%;background:var(--wt-panel);color:inherit;border:1px solid va
 </style>
 </head>
 <body><main>
-<h1>Crea la tua gara</h1>
-<p class="muted">Carica il percorso e scegli i checkpoint. Poi aggiungi i corridori e condividi il link. Nessun account.</p>
+<h1>Crea gara</h1>
+<p class="muted">Carica il percorso, poi collega i telefoni e condividi il link. Nessun account.</p>
 <div id="msg" role="alert"></div>
 <section class="card">
   <h2>Il percorso</h2>
@@ -52,12 +52,12 @@ textarea{width:100%;background:var(--wt-panel);color:inherit;border:1px solid va
   <label for="name">Nome della gara</label><input id="name" maxlength="80" placeholder="Es. Trail del Monte Rosa">
   <label for="every">Checkpoint automatici</label>
   <div class="km"><span>ogni</span><input id="every" type="number" min="0" max="50" value="10"><span>km</span></div>
-  <p class="hint">Metti 0 per non averne.</p>
-  <label for="cps">Checkpoint con un nome (facoltativo)</label>
+  <p class="hint">0 = nessuno.</p>
+  <label for="cps">Altri checkpoint (facoltativo)</label>
   <textarea id="cps" rows="3" placeholder="Ristoro @ 12.5"></textarea>
-  <p class="hint">Uno per riga: nome, @ e il chilometro.</p>
-  <div class="actions"><button class="primary" id="create">Crea la gara</button></div>
+  <p class="hint">Uno per riga: «Nome @ km», ad esempio «Ristoro @ 12.5».</p>
+  <div class="actions"><button class="primary" id="create">Crea gara</button></div>
 </section>
-<p class="small muted">Creando la gara accetti che i dati di posizione siano usati solo per mostrarla ai familiari e siano cancellati 24 ore dopo la fine.</p>
+<p class="small muted">Creando la gara accetti che le posizioni servano solo a mostrarla a chi ha il link e siano cancellate 24 ore dopo la fine. <a href="/privacy">Informativa</a></p>
 <script type="module" src="/js/crea.js"></script>
 </main></body></html>

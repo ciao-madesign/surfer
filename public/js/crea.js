@@ -2,8 +2,13 @@ import { parseGPXString } from './gpx-parser.js';
 
 const $ = (id) => document.getElementById(id);
 let course = null;
-const err = (t) => { const m = $('msg'); m.className = t ? 'err' : ''; m.textContent = t || ''; };
-const run = (fn) => async () => { err(''); try { await fn(); } catch (e) { err(e.message); } };
+const err = (t) => { const m = $('msg'); m.className = t ? 'err' : ''; m.textContent = t || ''; if (t) m.scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+let busy = false;
+const run = (fn) => async () => {
+  if (busy) return; busy = true; err('');
+  const b = $('create'); b.disabled = true;
+  try { await fn(); } catch (e) { err(e.message); } finally { busy = false; b.disabled = false; }
+};
 
 $('gpx').onchange = run(async () => {
   const f = $('gpx').files[0]; if (!f) return;
@@ -16,10 +21,10 @@ $('gpx').onchange = run(async () => {
   preview();
 });
 
-// anteprima del percorso caricato: distanza, dislivello e profilo altimetrico
+// anteprima del percorso caricato: distanza, salita e profilo altimetrico
 function preview() {
   const ele = course.points.map((p) => p[2]), d = course.dist, total = d.at(-1);
-  let gain = 0, ref = ele[0];   // dislivello con soglia di 5 m, per non sommare il rumore del GPS
+  let gain = 0, ref = ele[0];   // salita con soglia di 5 m, per non sommare il rumore del GPS
   for (const e of ele) { if (e - ref >= 5) { gain += e - ref; ref = e; } else if (ref - e >= 5) ref = e; }
   const min = Math.min(...ele), max = Math.max(...ele);
   $('pv-km').textContent = `${total.toFixed(1)} km`;
@@ -54,5 +59,6 @@ $('create').onclick = run(async () => {
     body: JSON.stringify({ name: $('name').value, course: { name: course.name, points: course.points }, checkpoints: cps }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'Errore nella creazione');
+  busy = true; $('create').disabled = true;   // si passa alla pagina di gestione: niente secondo invio
   location.href = j.organizerPath;   // pagina di gestione: il link nell'indirizzo è la chiave della gara
 });

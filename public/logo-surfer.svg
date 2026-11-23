@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192" role="img" aria-label="Surfer · Live">
+<path d="M140 48C100 24 44 44 56 84C66 116 134 106 142 142C150 176 88 176 48 150" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="140" cy="48" r="14" fill="#4fd1c5"/>
+<circle cx="48" cy="150" r="14" fill="#4fd1c5"/>
+</svg>

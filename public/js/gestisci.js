@@ -22,7 +22,7 @@ const box = (title, body, collapsible) => collapsible
   ? el('details', { class: 'card', open: openBoxes.has(title), ontoggle: (e) => { if (e.target.open) openBoxes.add(title); else openBoxes.delete(title); } },
     el('summary', {}, el('h2', {}, title)), ...[body].flat())
   : el('section', { class: 'card' }, el('h2', {}, title), ...[body].flat());
-function msg(text, kind = 'ok') { const m = document.getElementById('msg'); m.className = text ? kind : ''; m.textContent = text || ''; if (text) setTimeout(() => (m.className = ''), 5000); }
+function msg(text, kind = 'ok') { const m = document.getElementById('msg'); m.className = text ? kind : ''; m.textContent = text || ''; if (text && kind === 'ok') setTimeout(() => { if (m.className === 'ok') m.className = ''; }, 5000); }
 async function api(method, path, body) {
   const r = await fetch(`/api/admin/${path}`, { method, headers: { 'content-type': 'application/json', 'x-org-token': org }, body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => ({}));
@@ -49,6 +49,7 @@ const refresh = async () => { await load(); render(); };
 const ago = (ms) => { const s = Math.max(0, Math.round((serverTime - ms) / 1000)); return s < 90 ? `${s} s fa` : s < 5400 ? `${Math.round(s / 60)} min fa` : `${Math.round(s / 3600)} h fa`; };
 function signal(p) {
   const x = p.received;
+  if (!p.consent) return ['wait', 'In attesa del consenso del corridore'];
   if (!x) return ['wait', 'In attesa del primo segnale…'];
   const fresh = serverTime - x.rcv < 90000;
   return [fresh ? 'ok' : 'old', `${fresh ? 'Segnale ricevuto ✓' : 'Ultimo segnale'} ${ago(x.rcv)}`];
@@ -77,7 +78,7 @@ function sRunners(collapsible = false) {
       const j = await api('POST', `races/${race.id}/participants`, { name, color: document.getElementById('pcolor').value });
       setSec((s) => { s[j.participant.id] = { pairing: j.pairing, device: j.deviceToken }; }); await refresh();
     }) }, 'Aggiungi')) : '';
-  const body = [el('p', { class: 'small muted' }, 'Aggiungi fino a 5 persone. Ognuna avrà il proprio colore sulla mappa e il proprio collegamento.'),
+  const body = [el('p', { class: 'small muted' }, 'Fino a 5 persone, ognuna con il suo colore.'),
     race.participants.length ? el('ul', { class: 'list' }, ...race.participants.map((p) => el('li', { class: 'rn' }, el('span', { class: 'dot', style: `background:${p.color}` }), el('b', {}, p.name),
       can ? el('button', { class: 'end', onclick: run(async () => { if (!confirm(`Rimuovere ${p.name}?`)) return; await api('DELETE', `races/${race.id}/participants/${p.id}`); await refresh(); }) }, 'Rimuovi') : '')))
       : el('p', { class: 'muted' }, 'Ancora nessuno.'), add];
@@ -88,14 +89,14 @@ function sHow() {
   const tabs = el('div', { class: 'tabs' }, ...[['iphone', 'iPhone'], ['android', 'Android']].map(([k, label]) =>
     el('button', { 'aria-pressed': String(platform === k), onclick: () => { platform = k; try { localStorage.setItem('sl.platform', k); } catch { /* ok */ } render(); } }, label)));
   const ip = platform === 'iphone';
-  return el('div', { class: 'keynote' }, el('b', {}, 'Come si collega il telefono'), tabs,
+  return el('div', { class: 'keynote' }, el('b', {}, 'Come si collega'), tabs,
     el('ol', { class: 'how' },
-      el('li', {}, `Il corridore inquadra il QR code con la fotocamera e apre il link${ip ? ' in Safari' : ' in Chrome'}.`),
-      el('li', {}, 'Tocca «Avvia condivisione» e consente l\'uso della posizione.'),
-      el('li', {}, ip ? 'Tiene lo schermo acceso e la pagina aperta: se blocca il telefono, la condivisione si ferma.' : 'Tiene lo schermo acceso e la pagina in primo piano, con il risparmio energetico disattivato.')),
-    el('p', { class: 'small muted' }, ip ? 'Per tracciare anche a schermo spento si può usare l\'app gratuita Overland: le istruzioni sono sotto, in «Con l\'app Overland».'
-      : 'Un\'app per tracciare a schermo spento su Android è in arrivo.'),
-    el('p', { class: 'small' }, el('b', {}, 'Prova prima della gara: '), 'quando sotto compare «Segnale ricevuto ✓», il collegamento funziona.'));
+      el('li', {}, 'Inquadra il QR con la fotocamera e apri il link nel browser.'),
+      el('li', {}, 'Leggi le informazioni e dai il consenso.'),
+      el('li', {}, 'Tocca «Avvia condivisione» e consenti la posizione.'),
+      el('li', {}, ip ? 'Tieni lo schermo acceso e la pagina aperta.' : 'Tieni lo schermo acceso e disattiva il risparmio energetico.')),
+    el('p', { class: 'small muted' }, ip ? 'A schermo spento? Usa l\'app gratuita Overland (sotto).' : 'Su Android, per ora, la pagina deve restare aperta e lo schermo acceso.'),
+    el('p', { class: 'small' }, 'Quando compare «Segnale ricevuto ✓», funziona.'));
 }
 
 function sConnect(collapsible = false) {
@@ -104,7 +105,7 @@ function sConnect(collapsible = false) {
     const x = s[p.id], url = x ? `${base}/track#${x.pairing}` : '';
     return el('div', { class: 'keynote' },
       el('div', { class: 'rn' }, el('span', { class: 'dot', style: `background:${p.color}` }), el('b', {}, p.name), sigNode(p)),
-      x ? qr(url) : el('p', { class: 'small muted' }, 'Per sicurezza il QR code non si può rivedere. Creane uno nuovo: il vecchio smette di funzionare.'),
+      x ? qr(url) : el('p', { class: 'small muted' }, 'Il QR non si può rivedere. Creane uno nuovo.'),
       el('div', { class: 'row' },
         x ? el('button', { onclick: () => copy(url) }, 'Copia link') : '',
         x ? el('button', { onclick: () => share(`Collegamento di ${p.name}`, url) }, 'Invia') : '',
@@ -113,10 +114,11 @@ function sConnect(collapsible = false) {
         const j = await api('POST', `races/${race.id}/participants/${p.id}/token`, {});
         setSec((o) => { o[p.id] = { pairing: j.pairing, device: j.deviceToken }; }); await refresh();
       }) }, x ? 'Nuovo QR code' : 'Mostra QR code')),
-      x && platform === 'iphone' ? el('details', { class: 'small', style: 'margin-top:12px' }, el('summary', {}, 'Con l\'app Overland (anche a schermo spento)'),
-        el('p', { class: 'muted' }, 'Scarica «Overland» dall\'App Store, apri Impostazioni e inserisci questi due dati.'),
+      x ? el('p', { class: 'small', style: 'margin-top:8px' }, 'Anche con Overland il corridore apre prima il suo link e dà il consenso: finché non lo fa, le posizioni non vengono accettate.') : '',
+      x && platform === 'iphone' ? el('details', { class: 'small', style: 'margin-top:8px' }, el('summary', {}, 'Con l\'app Overland (anche a schermo spento)'),
+        el('p', { class: 'muted' }, 'Scarica «Overland» dall\'App Store e inserisci questi dati.'),
         el('div', { class: 'muted' }, 'Receiver Endpoint'), el('div', { class: 'secret' }, `${base}/api/device/overland`), el('button', { onclick: () => copy(`${base}/api/device/overland`) }, 'Copia indirizzo'),
-        el('div', { class: 'muted', style: 'margin-top:12px' }, 'Access Token (è personale: non condividerlo)'), el('div', { class: 'secret' }, x.device), el('button', { onclick: () => copy(x.device) }, 'Copia token')) : '');
+        el('div', { class: 'muted', style: 'margin-top:8px' }, 'Access Token (personale)'), el('div', { class: 'secret' }, x.device), el('button', { onclick: () => copy(x.device) }, 'Copia token')) : '');
   });
   return box('Collega i telefoni', race.participants.length ? [sHow(), ...cards] : el('p', { class: 'muted' }, 'Aggiungi prima chi corre.'), collapsible);
 }
@@ -128,10 +130,11 @@ function sLink() {
     const j = await api('POST', `races/${race.id}/link`, {}); setSec((o) => { o.link = j.path; }); await refresh();
   }) }, label);
   return el('section', { class: 'card' }, el('h2', {}, 'Il link per chi ti segue'),
-    el('p', { class: 'small muted' }, 'Mandalo ai tuoi cari o al tuo coach. Chi lo riceve vede la gara da qualsiasi dispositivo, senza app e senza account.'),
+    el('p', { class: 'small muted' }, 'Mandalo a chi vuole seguirti. Nessuna app, nessun account.'),
+    el('p', { class: 'small muted' }, 'Funziona fino a 24 ore dopo la fine della gara.'),
     url ? el('div', {}, qr(url), el('div', { class: 'secret' }, url),
       el('div', { class: 'row' }, el('button', { class: 'primary', onclick: () => share(race.name, url) }, 'Condividi'), el('button', { onclick: () => copy(url) }, 'Copia link')))
-      : race.hasLink ? el('p', { class: 'small muted' }, 'Il link è già stato creato. Per sicurezza non si può rivedere: se ti serve di nuovo, creane uno nuovo.') : '',
+      : race.hasLink ? el('p', { class: 'small muted' }, 'Link già creato. Per rivederlo, creane uno nuovo.') : '',
     el('div', { class: 'row', style: 'margin-top:8px' }, make(race.hasLink ? 'Nuovo link' : 'Crea il link'),
       race.hasLink ? el('button', { class: 'danger', onclick: run(async () => { if (!confirm('Disattivare il link? Chi lo ha non vedrà più la gara.')) return; await api('DELETE', `races/${race.id}/link`); setSec((o) => { delete o.link; }); await refresh(); }) }, 'Disattiva') : ''));
 }
@@ -142,7 +145,7 @@ function sStart() {
       checkItem(race.participants.length > 0, `${race.participants.length} ${race.participants.length === 1 ? 'corridore' : 'corridori'}`),
       readyItem(),
       checkItem(race.hasLink, race.hasLink ? 'Link creato' : 'Link non ancora creato')),
-    el('p', { class: 'small muted' }, 'Puoi avviare la gara anche prima che i telefoni siano collegati: le posizioni compaiono appena arrivano.'),
+    el('p', { class: 'small muted' }, 'Puoi partire anche senza telefoni collegati.'),
     el('button', { class: 'primary big', style: 'width:100%;min-height:52px', onclick: run(async () => { await api('POST', `races/${race.id}/start`); step = 1; await refresh(); msg('Gara avviata'); }) }, 'Avvia la gara'));
 }
 
@@ -150,11 +153,14 @@ function sReport() {
   if (race.reportPath) {
     const url = `${location.origin}${race.reportPath}`;
     return el('section', { class: 'card' }, el('h2', {}, 'Report di gara'),
-      el('p', { class: 'small muted' }, 'Tempi per settore e confronto tra i corridori. Resta disponibile per 3 giorni.'),
-      el('div', { class: 'secret' }, url), el('div', { class: 'row' }, el('button', { onclick: () => copy(url) }, 'Copia link'), el('a', { href: race.reportPath, target: '_blank', rel: 'noopener', class: 'tag' }, 'Apri')));
+      el('p', { class: 'small muted' }, 'Tempi per settore e confronti. Disponibile 3 giorni.'),
+      el('div', { class: 'secret' }, url), el('div', { class: 'row' }, el('button', { onclick: () => copy(url) }, 'Copia link'), el('a', { href: race.reportPath, target: '_blank', rel: 'noopener', class: 'tag' }, 'Apri')),
+      el('div', { class: 'row', style: 'margin-top:8px' }, el('button', { class: 'small', onclick: run(async () => {
+        if (!confirm('Creare un nuovo link del report? Quello vecchio smette di funzionare.')) return;
+        await api('POST', `races/${race.id}/report`, {}); await refresh(); msg('Nuovo link creato'); }) }, 'Nuovo link del report')));
   }
   if (race.status === 'ended' && race.archive === 'pending') return el('section', { class: 'card' }, el('h2', {}, 'Report in preparazione'),
-    el('p', { class: 'small muted' }, 'L\'archivio non ha ancora risposto. Il sistema riprova da solo; puoi anche riprovare ora.'),
+    el('p', { class: 'small muted' }, 'Il sistema riprova da solo. Puoi riprovare anche ora.'),
     el('button', { onclick: run(async () => { await api('POST', `races/${race.id}/archive`); await refresh(); }) }, 'Riprova ora'));
   return '';
 }
@@ -167,19 +173,23 @@ function sStatus() {
 }
 
 function sEnd() {
-  return el('div', { class: 'danger-zone' },
-    race.status === 'live' ? el('button', { class: 'danger', style: 'width:100%', onclick: run(async () => {
+  const end = race.status === 'live' ? el('section', { class: 'card' }, el('h2', {}, 'Fine della gara'),
+    el('p', { class: 'small muted' }, 'Le posizioni saranno cancellate dopo 24 ore e verrà preparato il report.'),
+    el('button', { class: 'danger', onclick: run(async () => {
       if (!confirm('Terminare la gara? Le posizioni saranno cancellate dopo 24 ore e verrà preparato il report.')) return;
-      await api('POST', `races/${race.id}/end`); await refresh(); }) }, 'Termina la gara') : '',
-    el('p', {}, el('button', { class: 'linkbtn', onclick: run(async () => { if (!confirm('Eliminare la gara e tutti i dati?')) return;
-      await api('DELETE', `races/${race.id}`); $app.replaceChildren(el('h1', {}, 'Gara eliminata'), el('p', { class: 'muted' }, 'Tutti i dati sono stati cancellati.'), el('a', { class: 'btn primary', href: '/crea' }, 'Crea una nuova gara')); }) }, 'Elimina la gara e tutti i dati')));
+      await api('POST', `races/${race.id}/end`); await refresh(); }) }, 'Termina la gara')) : '';
+  const del = el('section', { class: 'card', style: 'margin-top:32px' }, el('h2', {}, 'Elimina la gara'),
+    el('p', { class: 'small muted' }, 'Cancella subito la gara e tutti i dati. Non si può annullare.'),
+    el('button', { class: 'danger', onclick: run(async () => { if (!confirm('Eliminare la gara e tutti i dati?')) return;
+      await api('DELETE', `races/${race.id}`); $app.replaceChildren(el('h1', {}, 'Gara eliminata'), el('p', { class: 'muted' }, 'Tutti i dati sono stati cancellati.'), el('a', { class: 'btn primary', href: '/crea' }, 'Crea una nuova gara')); }) }, 'Elimina la gara'));
+  return el('div', {}, end, del);
 }
 
 // ---------- pagina ----------
 function render() {
   const state = race.status === 'live' ? ' · In corso' : race.status === 'ended' ? ' · Conclusa' : '';
   const head = [el('h1', {}, race.name), el('div', { class: 'small muted' }, `${race.checkpoints.length} checkpoint${state}`),
-    el('div', { class: 'keynote small' }, 'Questo indirizzo è la chiave della tua gara: ', el('b', {}, 'salvalo tra i preferiti'), ' e non condividerlo. Chi lo ha può modificare la gara.')];
+    el('div', { class: 'keynote small' }, el('b', {}, 'Salva questo indirizzo tra i preferiti.'), ' È la chiave della gara: non condividerlo.')];
   if (race.status === 'draft') {
     const names = ['Corridori', 'Collega', 'Condividi', 'Avvia'];
     const body = [sRunners, sConnect, sLink, sStart][step - 1]();

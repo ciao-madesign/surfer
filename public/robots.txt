@@ -10,3 +10,5 @@ Disallow: /report
 Disallow: /track
 Disallow: /simulate
 Disallow: /api/
+
+Sitemap: https://surfer-eta.vercel.app/sitemap.xml
