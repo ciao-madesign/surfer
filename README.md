@@ -61,7 +61,7 @@ npm run dev       # ADMIN_KEY=dev, archivio in memoria, http://localhost:3000
 Sorgenti in `public/js/config.js`: Esri World Imagery e OpenTopoMap con attribuzione, rilievo AWS Terrain Tiles, meteo Open-Meteo (CC BY 4.0, uso non commerciale). Vercel Hobby: solo uso non commerciale. Surfer è oggi gratuito e senza scopo di lucro; prima di un uso commerciale vedi `ROADMAP.md`.
 
 ## Logo (provvisorio)
-`public/logo-surfer.svg`: una «S» a punte, come un profilo altimetrico, con lo stesso spessore e le stesse giunzioni della «W» di WizTrail, sul disco con le curve di livello. Nel footer resta il simbolo bianco di WizTrail (`public/logo-mark.svg`).
+`public/logo-surfer.svg`: una «S» morbida che simula una traccia GPX, senza sfondo, con un pallino verde acqua in apertura e uno in chiusura del percorso. Nel footer resta il simbolo bianco di WizTrail (`public/logo-mark.svg`).
 
 ## Stato
 - Provati con test automatici: API, gare multi-utente, link e scadenze, checkpoint, statistiche, filtri GPS, archivio, report, consenso, cancellazione, limiti (53 test).
