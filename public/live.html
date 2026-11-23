@@ -14,30 +14,50 @@
 <link rel="stylesheet" href="/lib/maplibre/maplibre-gl.css">
 <style>
   body{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
-  header{padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid var(--wt-border)}
-  h1{font-size:1.1rem;margin:0;font-weight:600}
+  header{padding:8px 16px;padding-top:max(8px,env(safe-area-inset-top));display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid var(--wt-border)}
+  h1{font-size:1.1rem;margin:0;font-weight:500}
   #map{flex:1 1 45%;min-height:220px;position:relative}
-  #ctl{position:absolute;top:8px;right:8px;z-index:2;display:flex;flex-direction:column;gap:6px}
-  #ctl button{min-height:44px;padding:4px 10px;background:rgba(10,15,20,.85)}
-  #panel{flex:1 1 55%;overflow:auto;padding:8px 12px calc(12px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
-  #banner{display:none;background:var(--wt-warn);color:#1a1300;padding:6px 12px;font-size:var(--wt-size-small)}
+  #ctl{position:absolute;top:8px;left:8px;right:8px;z-index:2;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+  #ctl::-webkit-scrollbar{display:none}
+  #ctl button{flex:none;min-height:44px;padding:4px 8px;font-size:var(--wt-size-small);background:rgba(10,15,20,.85)}
+  #panel{flex:1 1 55%;overflow:auto;padding:8px 12px calc(16px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+  #banner{display:none;background:var(--wt-card);border-bottom:1px solid var(--wt-border);border-left:4px solid var(--wt-warn);padding:8px 12px;font-size:var(--wt-size-small)}
   #fatal{display:none;padding:32px 20px;text-align:center}
-  .runner{display:grid;grid-template-columns:1fr auto;gap:2px 10px}
-  .runner .name{font-weight:600}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-top:8px}
-  .stats div{background:var(--wt-panel);border-radius:8px;padding:6px 8px}
-  .stats b{display:block;font-family:var(--wt-font-mono);font-weight:400;font-size:1rem}
+  .card{padding:12px;margin:8px 0}
+  .runner .head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .runner .name{font-weight:500}
+  .key{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px;font-size:var(--wt-size-small);color:var(--wt-muted)}
+  .key b,.stats b{display:block;font-family:var(--wt-font-mono);font-weight:400;color:var(--wt-ink);font-variant-numeric:tabular-nums}
+  .key b{font-size:1.05rem}
+  .more{margin-top:8px}
+  .more summary{cursor:pointer;font-size:var(--wt-size-small);color:var(--wt-teal);min-height:32px;display:flex;align-items:center}
+  .stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:4px;margin-top:8px}
+  .stats div{background:var(--wt-panel);border-radius:6px;padding:8px;font-size:var(--wt-size-small);color:var(--wt-muted)}
+  .stats b{font-size:.95rem}
   .st-tracking{color:var(--wt-ok)}.st-offline,.st-no_gps{color:var(--wt-warn)}.st-paused{color:var(--wt-muted)}
+  .bad{color:var(--wt-warn)}
   .pin{width:28px;height:28px;border-radius:50%;border:3px solid #fff;color:#fff;font:600 13px var(--wt-font-sans);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,.6)}
   .pin.old{opacity:.55}
   .cp{width:12px;height:12px;background:#fff;border:3px solid #0a0f14;border-radius:3px;transform:rotate(45deg)}
-  #profile{width:100%;height:110px;display:block}
-  #weather{display:flex;gap:10px;flex-wrap:wrap}
-  .wx{flex:1;min-width:140px;background:var(--wt-panel);border-radius:8px;padding:8px}
-  table{width:100%;border-collapse:collapse;font-size:var(--wt-size-small)}
-  td,th{text-align:left;padding:3px 4px;border-bottom:1px solid var(--wt-border)}
+  #profile{width:100%;height:96px;display:block}
+  #profile-km{position:relative;height:16px;font-size:11px;color:var(--wt-muted);font-family:var(--wt-font-mono);margin-bottom:4px}
+  #profile-km span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+  #profile-km span:first-child{transform:none}#profile-km span:last-child{transform:translateX(-100%)}
+  #weather{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .wx{flex:1;min-width:140px;background:var(--wt-panel);border-radius:6px;padding:8px}
+  .wx b{font-weight:500}
+  table{width:100%;border-collapse:collapse;font-size:var(--wt-size-small);margin-top:8px}
+  td,th{text-align:left;padding:4px;border-bottom:1px solid var(--wt-border);font-weight:500}
+  td{font-weight:400;font-variant-numeric:tabular-nums}
+  /* computer: mappa a sinistra, corridori in colonna a destra */
+  @media (min-width:900px){
+    body:not(.demo){display:grid;grid-template-columns:1fr 420px;grid-template-rows:auto auto auto 1fr}
+    body:not(.demo)>header,body:not(.demo)>#demo,body:not(.demo)>#banner,body:not(.demo)>#fatal{grid-column:1/3}
+    body:not(.demo) #map{grid-row:4;grid-column:1;min-height:0}
+    body:not(.demo) #panel{grid-row:4;grid-column:2;border-left:1px solid var(--wt-border)}
+  }
   /* demo nella cornice del telefono: meno scritte */
-  body.demo.framed header,body.demo.framed #ctl,body.demo #ctl,body.demo .stats,body.demo details,body.demo table,body.demo #weatherCard,body.demo #note,body.demo #profile-info{display:none!important}
+  body.demo.framed header,body.demo.framed #ctl,body.demo #ctl,body.demo .more,body.demo #weatherCard,body.demo #note,body.demo #profile-info,body.demo #profile-km{display:none!important}
   body.demo #map{flex-basis:62%}
   body.demo .pin{width:34px;height:34px;font-size:15px}
 </style>
@@ -50,9 +70,11 @@
 <div id="map"><div id="ctl"><button id="b3d">3D</button><button id="bbase">Mappa</button><button id="bfit">Tutto il percorso</button><button id="brun">Dove sono</button></div></div>
 <div id="panel">
   <div class="card"><svg id="profile" role="img" aria-label="Profilo altimetrico"></svg>
+    <div id="profile-km" aria-hidden="true"></div>
     <div class="small muted" id="profile-info"></div></div>
   <div id="runners"></div>
-  <div class="card" id="weatherCard"><b>Meteo</b> <span class="small muted">previsione, non misura sul posto</span>
+  <div class="card" id="weatherCard"><b style="font-weight:500">Meteo</b>
+    <div class="small muted">Previsione, non misura sul posto</div>
     <div id="weather"></div></div>
   <p class="small muted" id="note">Posizioni indicative, aggiornate a intervalli. Tempi e stime non sostituiscono il cronometraggio ufficiale. Meteo: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (CC BY 4.0).</p>
 </div>

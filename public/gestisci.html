@@ -19,17 +19,17 @@ h1{font-size:1.7rem;margin:16px 0 6px}h2{font-size:1.25rem;margin:0 0 12px}
 .row{gap:12px}
 .secret{word-break:break-all;background:var(--wt-panel);padding:8px;border-radius:8px;font-family:var(--wt-font-mono);font-size:12px;margin:6px 0}
 #msg{position:sticky;top:0;z-index:5;padding:8px 12px;border-radius:8px;display:none;margin:8px 0}
-#msg.err{display:block;background:var(--wt-error);color:#1a0000}#msg.ok{display:block;background:var(--wt-ok);color:#001a08}
+#msg{background:var(--wt-card);border:1px solid var(--wt-border);border-left-width:4px}#msg.err{display:block;border-left-color:var(--wt-error)}#msg.ok{display:block;border-left-color:var(--wt-ok)}
 .keynote{background:var(--wt-panel);border:1px solid var(--wt-border);border-radius:14px;padding:18px 16px;margin:22px 0}
 .steps{display:flex;gap:8px;margin:36px 0 8px;padding:0;list-style:none}
 .steps li{flex:1;text-align:center;font-size:.8rem;color:var(--wt-muted);border-top:3px solid var(--wt-border);padding-top:6px}
 .steps li.on{color:var(--wt-ink);border-color:var(--wt-teal,#2bb7da);font-weight:600}
-.steps li.done{border-color:var(--wt-ok);color:var(--wt-ink)}
+.steps li.done{border-color:var(--wt-teal-700);color:var(--wt-ink)}
 .nav{display:flex;justify-content:space-between;gap:8px;margin-top:36px}
 .qr{width:210px;max-width:100%;background:#fff;padding:10px;border-radius:14px;margin:20px auto}
 .qr svg{display:block;width:100%;height:auto}
 .tabs{display:flex;gap:6px;margin:8px 0}
-.tabs button[aria-pressed=true]{background:var(--wt-teal-tint);border-color:var(--wt-teal,#2bb7da)}
+.tabs button[aria-pressed=true]{background:var(--wt-teal);border-color:var(--wt-teal);color:var(--wt-teal-deep);font-weight:600}
 ol.how{list-style:none;padding:0;margin:14px 0;line-height:1.5;counter-reset:s}
 ol.how li{margin:12px 0}ol.how li::before{counter-increment:s;content:counter(s) " · ";color:var(--wt-teal,#2bb7da);font-weight:600}
 #ready{margin:6px 0}
@@ -37,6 +37,18 @@ ol.how li{margin:12px 0}ol.how li::before{counter-increment:s;content:counter(s)
 .rn{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}
 .secret{text-align:center;margin:14px 0}
 details{margin-top:18px}
+h1,h2{font-weight:500}b{font-weight:600}
+.list{margin:12px 0;padding:0;list-style:none;text-align:left}
+.list .rn{justify-content:flex-start;border-top:1px solid var(--wt-border);padding:4px 0;margin:0;min-height:52px}.list .rn:first-child{border-top:0}
+.rn .end{margin-left:auto;text-align:right}.list .rn{flex-wrap:nowrap}.list .rn b{flex:none}
+.check{list-style:none;padding:0;margin:12px auto;display:inline-block;text-align:left;line-height:1.8}
+.check li{display:flex;gap:8px}.check .ic{width:16px;flex:none;text-align:center;color:var(--wt-muted)}.check .ic.ok{color:var(--wt-teal)}
+details.card{margin-top:32px}
+details.card>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;text-align:left}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary h2{margin:0}
+details.card>summary::after{content:"Mostra";font-size:var(--wt-size-small);color:var(--wt-teal)}
+details.card[open]>summary::after{content:"Nascondi"}
 </style>
 </head>
 <body><main>
