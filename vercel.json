@@ -28,6 +28,10 @@
       "destination": "/gestisci.html"
     },
     {
+      "source": "/iscriviti",
+      "destination": "/iscriviti.html"
+    },
+    {
       "source": "/crea",
       "destination": "/crea.html"
     },

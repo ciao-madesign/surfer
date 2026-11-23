@@ -25,7 +25,9 @@ Stato: idea per sviluppo futuro, con valutazione di novembre 2026 (sotto). Nessu
 
 Obiettivo: il corridore si iscrive da solo con un link, dà il consenso e riceve il proprio tracker. Nessun gruppo, nessuna nuova infrastruttura; tetto da 5 a 20 corridori.
 
-**Decisioni da prendere prima di iniziare**
+**Decisioni prese (novembre 2026)**: tetto 20; un solo link di gara che mostra tutti; iscrizioni aperte con tetto; nessuna iscrizione per conto di altri. Realizzato: interventi 1–8 (vedi sotto); restano le verifiche pre-lancio.
+
+**Decisioni da prendere prima di iniziare (storico)**
 1. Tetto di corridori per gara aperta (proposta: 20).
 2. Chi segue: un solo link di gara che mostra tutti (proposta, semplice) oppure un link per corridore (più lavoro, rimandato).
 3. Iscrizioni: aperte con tetto (proposta) o con approvazione dell'organizzatore.

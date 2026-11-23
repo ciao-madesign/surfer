@@ -2,7 +2,7 @@
 
 **Segui una gara in diretta, da casa.** Un link privato mostra su una mappa dove si trova chi corre, quando passa ai checkpoint e quando arriverà. Gratuito, senza account e senza app per chi guarda.
 
-Pensato per famiglia, amici e allenatori di chi corre (oggi trail, altri sport in futuro) e per i piccoli eventi: ognuno crea la propria gara (percorso GPX, checkpoint, fino a 5 corridori) in pochi minuti. Il corridore decide: condivide la posizione solo dopo il suo consenso e può fermarsi e cancellare i propri dati quando vuole.
+Pensato per famiglia, amici e allenatori di chi corre (oggi trail, altri sport in futuro) e per i piccoli eventi: ognuno crea la propria gara (percorso GPX, checkpoint, fino a 20 corridori) in pochi minuti. Il corridore decide: condivide la posizione solo dopo il suo consenso e può fermarsi e cancellare i propri dati quando vuole.
 
 Il progetto è autonomo e fa parte della famiglia [WizTrail](https://github.com/ciao-madesign/WizTrail): stesso design system e font, logo derivato da quello di WizTrail, parser GPX di [Simule](https://github.com/ciao-madesign/Simule).
 
@@ -11,7 +11,7 @@ Produzione: <https://surfer-eta.vercel.app>
 ## Come funziona
 
 1. **Crea la gara** (`/crea`): carichi il GPX, scegli il nome e i checkpoint. Ricevi un indirizzo segreto per gestirla (`/gestisci#…`): va salvato tra i preferiti.
-2. **Percorso guidato** (`/gestisci`): aggiungi i corridori, collega ogni telefono con un QR code (istruzioni per iPhone e Android), crea il link da condividere e avvia la gara.
+2. **Percorso guidato** (`/gestisci`): aggiungi i corridori uno per uno (un QR per ogni telefono) **oppure** manda un link di iscrizione (`/iscriviti`): ognuno si iscrive da solo e dà il consenso. Poi crea il link da condividere e avvia la gara.
 3. **Il corridore** apre il suo link, legge le informazioni e dà il consenso; poi avvia la condivisione dal browser o dall'app Overland.
 4. **Chi guarda** apre `/live#…` da qualsiasi browser.
 5. A fine gara le posizioni si cancellano entro 24 ore; il report con i tempi resta 3 giorni.
@@ -43,11 +43,11 @@ Scelte di semplicità: nessun framework; risposte `live` in cache sulla CDN; dat
 - Informativa in `/privacy`, condizioni in `/condizioni`, valutazione preliminare in `docs/pre-dpia.md`: da far rivedere a un legale o DPO prima del lancio pubblico.
 
 ## Limiti del servizio gratuito
-5 corridori e 30 checkpoint per gara; 5 gare create al giorno per rete e 500 attive (`CREATE_PER_DAY`, `MAX_ACTIVE_RACES`); 120 punti per richiesta, 30 richieste al minuto per corridore.
+20 corridori (`MAX_PARTICIPANTS`) e 30 checkpoint per gara; 5 gare create al giorno per rete e 500 attive (`CREATE_PER_DAY`, `MAX_ACTIVE_RACES`); 120 punti per richiesta, 30 richieste al minuto per corridore.
 
 ## Provarlo in locale
 ```bash
-npm test          # test automatici (60)
+npm test          # test automatici (63)
 npm run migrate   # applica le migrazioni del database (DATABASE_URL; --dry per provare)
 npm run dev       # ADMIN_KEY=dev, archivio in memoria, http://localhost:3000
 ```
@@ -65,7 +65,7 @@ Sorgenti in `public/js/config.js`: Esri World Imagery e OpenTopoMap con attribuz
 `public/logo-surfer.svg`: una «S» morbida che simula una traccia GPX, senza sfondo, con un pallino verde acqua in apertura e uno in chiusura del percorso. Nel footer resta il simbolo bianco di WizTrail (`public/logo-mark.svg`).
 
 ## Stato
-- Provati con test automatici: API, gare multi-utente, link e scadenze, checkpoint, statistiche, filtri GPS, archivio, report, consenso, cancellazione, limiti (60 test).
+- Provati con test automatici: API, gare multi-utente, link e scadenze, checkpoint, statistiche, filtri GPS, archivio, report, consenso, cancellazione, limiti (63 test).
 - Provato sul campo: Overland su iPhone (oltre 3 ore, stabile), prima dell'introduzione del consenso.
 - Da verificare: consenso con Overland su iPhone, archivio su Neon con una gara vera, mappe e meteo in produzione con la CSP, Android.
 

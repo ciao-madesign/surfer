@@ -1,7 +1,8 @@
 // Pagina dell'organizzatore: percorso guidato (corridori → collegamento telefoni → link → avvio) e, a gara avviata, gestione.
 const org = decodeURIComponent(location.hash.slice(1));
 const $app = document.getElementById('app');
-const COLORS = ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa'];
+const COLORS = ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa', '#ff7043', '#00bfa5', '#5c6bc0', '#c0ca33', '#d81b60', '#26c6da', '#8d6e63'];
+const MAX_RUNNERS = 20;
 let race = null, serverTime = Date.now(), step = 1;
 let platform = (() => { try { return localStorage.getItem('sl.platform'); } catch { return null; } })() || (/android/i.test(navigator.userAgent) ? 'android' : 'iphone');
 
@@ -69,16 +70,16 @@ const readyItem = () => checkItem(race.participants.length > 0 && connected() ==
 
 // ---------- sezioni ----------
 function sRunners(collapsible = false) {
-  const full = race.participants.length >= 5, can = race.status !== 'ended';
+  const full = race.participants.length >= MAX_RUNNERS, can = race.status !== 'ended';
   const add = !full && can ? el('div', { class: 'row', style: 'margin-top:10px' },
     el('input', { id: 'pname', placeholder: 'Nome o soprannome', maxLength: 40, style: 'flex:1;min-width:140px', 'aria-label': 'Nome del corridore' }),
-    el('input', { id: 'pcolor', type: 'color', value: COLORS[race.participants.length % 5], style: 'width:56px;padding:2px', 'aria-label': 'Colore sulla mappa' }),
+    el('input', { id: 'pcolor', type: 'color', value: COLORS[race.participants.length % COLORS.length], style: 'width:56px;padding:2px', 'aria-label': 'Colore sulla mappa' }),
     el('button', { class: 'primary', onclick: run(async () => {
       const name = document.getElementById('pname').value.trim(); if (!name) throw new Error('Scrivi il nome del corridore');
       const j = await api('POST', `races/${race.id}/participants`, { name, color: document.getElementById('pcolor').value });
       setSec((s) => { s[j.participant.id] = { pairing: j.pairing, device: j.deviceToken }; }); await refresh();
     }) }, 'Aggiungi')) : '';
-  const body = [el('p', { class: 'small muted' }, 'Fino a 5 persone, ognuna con il suo colore.'),
+  const body = [el('p', { class: 'small muted' }, `Fino a ${MAX_RUNNERS} persone, ognuna con il suo colore.`),
     race.participants.length ? el('ul', { class: 'list' }, ...race.participants.map((p) => el('li', { class: 'rn' }, el('span', { class: 'dot', style: `background:${p.color}` }), el('b', {}, p.name),
       can ? el('button', { class: 'end', onclick: run(async () => { if (!confirm(`Rimuovere ${p.name}?`)) return; await api('DELETE', `races/${race.id}/participants/${p.id}`); await refresh(); }) }, 'Rimuovi') : '')))
       : el('p', { class: 'muted' }, 'Ancora nessuno.'), add];
@@ -126,6 +127,23 @@ function sConnect(collapsible = false) {
         el('p', { class: 'muted', style: 'margin-top:8px' }, 'Frequenza: 15 secondi. Accuratezza: alta. Poi avvia il servizio e consenti la posizione «sempre».')) : '');
   });
   return box('Collega i telefoni', race.participants.length ? [sHow(), ...cards] : el('p', { class: 'muted' }, 'Aggiungi prima chi corre.'), collapsible);
+}
+
+// Iscrizione autonoma: i corridori si iscrivono da soli con un link, fino alla partenza.
+function sEnroll() {
+  if (race.status !== 'draft') return '';
+  const s = sec(), url = s.enroll ? `${location.origin}${s.enroll}` : '';
+  const make = (label) => el('button', { class: url || race.hasEnroll ? '' : 'primary', onclick: run(async () => {
+    if (race.hasEnroll && !confirm('Creare un nuovo link di iscrizione? Quello vecchio smette di funzionare.')) return;
+    const j = await api('POST', `races/${race.id}/enroll`, {}); setSec((o) => { o.enroll = j.path; }); await refresh();
+  }) }, label);
+  return el('section', { class: 'card' }, el('h2', {}, 'Iscrizione dei corridori'),
+    el('p', { class: 'small muted' }, 'Invece di aggiungerli uno per uno, manda un link: ognuno scrive il proprio nome, dà il consenso e collega il telefono. Le iscrizioni si chiudono alla partenza.'),
+    url ? el('div', {}, qr(url), el('div', { class: 'secret' }, url),
+      el('div', { class: 'row' }, el('button', { class: 'primary', onclick: () => share(`Iscrizione: ${race.name}`, url) }, 'Condividi'), el('button', { onclick: () => copy(url) }, 'Copia link')))
+      : race.hasEnroll ? el('p', { class: 'small muted' }, 'Link già creato. Per rivederlo, creane uno nuovo.') : '',
+    el('div', { class: 'row', style: 'margin-top:8px' }, make(race.hasEnroll ? 'Nuovo link di iscrizione' : 'Crea il link di iscrizione'),
+      race.hasEnroll ? el('button', { class: 'danger', onclick: run(async () => { if (!confirm('Chiudere le iscrizioni? Chi ha il link non potrà più iscriversi.')) return; await api('DELETE', `races/${race.id}/enroll`); setSec((o) => { delete o.enroll; }); await refresh(); }) }, 'Chiudi le iscrizioni') : ''));
 }
 
 function sLink() {
@@ -197,7 +215,7 @@ function render() {
     el('div', { class: 'keynote small' }, el('b', {}, 'Salva questo indirizzo tra i preferiti.'), ' È la chiave della gara: non condividerlo.')];
   if (race.status === 'draft') {
     const names = ['Corridori', 'Collega', 'Condividi', 'Avvia'];
-    const body = [sRunners, sConnect, sLink, sStart][step - 1]();
+    const body = [() => el('div', {}, sRunners(), sEnroll()), sConnect, sLink, sStart][step - 1]();
     $app.replaceChildren(...head, el('ol', { class: 'steps' }, ...names.map((n, i) => el('li', { class: i + 1 === step ? 'on' : i + 1 < step ? 'done' : '' }, `${i + 1} · ${n}`))), body,
       el('div', { class: 'nav' }, step > 1 ? el('button', { onclick: () => { step--; render(); window.scrollTo(0, 0); } }, '← Indietro') : el('span'),
         step < 4 ? el('button', { class: 'primary', disabled: step === 1 && !race.participants.length, onclick: () => { step++; render(); window.scrollTo(0, 0); } }, 'Avanti →') : el('span')));

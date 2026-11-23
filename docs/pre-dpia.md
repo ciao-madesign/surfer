@@ -9,7 +9,7 @@ Condivisione in tempo reale della posizione GPS di un corridore, con il suo cons
 Nome o pseudonimo; posizione GPS e orario; data e versione del consenso; tempi e statistiche. Nessuna email, nessun telefono, nessun profilo (per ora).
 
 ## Scala e durata
-Piccoli eventi: fino a 5 corridori per gara. Posizioni cancellate entro 24 ore dalla fine; tempi e statistiche 3 giorni; bozze 15 giorni.
+Piccoli eventi: fino a 20 corridori per gara, anche con iscrizione autonoma tramite link. Posizioni cancellate entro 24 ore dalla fine; tempi e statistiche 3 giorni; bozze 15 giorni.
 
 ## Misure già presenti
 Consenso esplicito del corridore (non retroattivo, età minima 14 anni o consenso del genitore); link privati non indicizzabili; cancellazione da parte di corridore e organizzatore; nessuna API che restituisce lo storico GPS; nessun profilo o tracciamento pubblicitario; limiti anti-abuso con indirizzi di rete pseudonimizzati e cancellati dopo 2 giorni.

@@ -83,6 +83,17 @@ export function createRaces({ common, finish, archive, env, now }) {
     } finally { await repo.unlock(lock); }
   }
 
+  // Informazioni per la pagina di iscrizione: nome della gara e se si può ancora entrare (solo chi ha il link).
+  async function enrollInfo(headers, query) {
+    const t = String(query?.t || '');
+    if (t.length < 20) throw new HttpError(401, 'Link di iscrizione non valido');
+    const raceId = await repo.raceIdByEnroll(sha256(t));
+    if (!raceId) throw new HttpError(401, 'Link di iscrizione non valido o chiuso');
+    const m = await loadRace(raceId);
+    if (m.enrollHash !== sha256(t)) throw new HttpError(401, 'Link di iscrizione non valido o chiuso');
+    return { name: m.name, open: m.status === 'draft', full: m.participants.length >= maxParts };
+  }
+
   // Cancella un corridore: archivio (se la gara è già archiviata) e dati live. Usata da organizzatore e dal corridore stesso.
   async function removeParticipant(m, p) {
     if (archive.enabled && m.status === 'ended' && m.archive?.state === 'done') {
@@ -242,5 +253,5 @@ export function createRaces({ common, finish, archive, env, now }) {
   }
 
 
-  return { createRace, publicCreate, removeParticipant, deviceMe, adminRoutes, enroll };
+  return { createRace, publicCreate, removeParticipant, deviceMe, adminRoutes, enroll, enrollInfo };
 }

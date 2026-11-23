@@ -20,7 +20,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   const races = createRaces({ common, finish, archive, env, now });
   const { ingest, overland, osmand, owntracks, gpslogger } = createIngest({ common, env, now });
   const { live, courseRoute, stats } = createViews({ common, env, now });
-  const { ipId } = common, { report, cron } = finish, { publicCreate, adminRoutes, deviceMe, enroll } = races;
+  const { ipId } = common, { report, cron } = finish, { publicCreate, adminRoutes, deviceMe, enroll, enrollInfo } = races;
 
   // ---------- smistamento ----------
   const NOCACHE = { 'Cache-Control': 'no-store' };
@@ -53,6 +53,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (route === 'cron/archive') return ok(await cron(h));
       if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
+      if (route === 'enroll' && method === 'GET') return ok(await enrollInfo(h, query));
       if (route === 'enroll' && method === 'POST') return ok(await enroll(h, body, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));
       if (route === 'device/me' && (method === 'GET' || method === 'DELETE')) return ok(await deviceMe(h, method));

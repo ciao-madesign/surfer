@@ -6,6 +6,7 @@ Disallow: /live
 Disallow: /gestisci
 Disallow: /admin
 Disallow: /crea
+Disallow: /iscriviti
 Disallow: /report
 Disallow: /track
 Disallow: /simulate

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Surfer · Live · Iscrizione alla gara</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/css/fonts.css">
+<link rel="stylesheet" href="/css/colors_and_type.css">
+<link rel="stylesheet" href="/css/app.css">
+<style>
+main{max-width:520px;margin:0 auto;padding:16px 16px 48px}
+h1{font-size:1.5rem;font-weight:500;margin:8px 0 4px}
+.card{padding:16px;margin:16px 0}
+label.f{display:block;margin-top:16px}
+#msg{padding:8px 12px;border-radius:8px;display:none;margin:12px 0;background:var(--wt-card);border:1px solid var(--wt-border);border-left:4px solid var(--wt-error)}
+#msg.err{display:block}
+.secret{font-family:var(--wt-font-mono);word-break:break-all;background:var(--wt-panel);border:1px solid var(--wt-border);border-radius:8px;padding:8px;margin:4px 0}
+.actions{margin-top:20px}
+a.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:8px 16px;border-radius:8px;text-decoration:none}
+a.btn.primary{background:var(--wt-teal);color:var(--wt-teal-deep);font-weight:600}
+</style>
+</head>
+<body><main>
+<h1 id="title">Iscrizione alla gara</h1>
+<p class="muted" id="sub">Un minuto: scrivi il tuo nome, dai il consenso e collega il telefono.</p>
+<div id="msg" role="alert"></div>
+
+<section class="card" id="form" hidden>
+  <label class="f" for="name">Il tuo nome o soprannome</label>
+  <input id="name" maxlength="40" autocomplete="nickname" placeholder="Es. Giulia">
+  <p class="small" style="margin-top:16px">Durante la gara la tua posizione e il tuo nome sono visibili a chi ha il link della gara. Le posizioni vengono cancellate 24 ore dopo la fine; il report con i tempi resta 3 giorni. Puoi cancellare i tuoi dati in qualsiasi momento.</p>
+  <label class="small"><input type="checkbox" id="age" style="width:auto;min-height:0"> Ho almeno 14 anni, oppure sono il genitore o tutore e acconsento per un minore.</label>
+  <div class="actions"><button class="primary big" id="join" disabled style="width:100%">Mi iscrivo e acconsento</button></div>
+  <p class="small muted" style="margin-top:12px"><a href="/privacy">Informativa privacy</a></p>
+</section>
+
+<section class="card" id="done" hidden>
+  <b>Sei iscritto ✓</b>
+  <p class="small muted">Ora collega il telefono: la condivisione parte solo quando premi «Avvia» nel tracker.</p>
+  <div class="actions"><a class="btn primary" id="open" style="width:100%">Apri il tracker nel browser</a></div>
+  <p class="small muted" style="margin-top:12px">Il browser non funziona a schermo spento. Se serve, usa un'app (consenso già dato qui).</p>
+  <details class="small"><summary>App per schermo spento</summary>
+    <p class="muted">iPhone: «Overland». Android: «Traccar Client».</p>
+    <div class="muted">Codice del corridore</div><div class="secret" id="code"></div><button id="copycode" class="small">Copia codice</button>
+    <div class="muted" style="margin-top:8px">Indirizzo per Overland (iPhone)</div><div class="secret" id="ovl"></div>
+    <div class="muted" style="margin-top:8px">Indirizzo per Traccar Client (Android)</div><div class="secret" id="trc"></div>
+    <p class="muted">Salva questi dati: non si possono rivedere. Se li perdi, chiedi un nuovo codice all'organizzatore.</p>
+  </details>
+</section>
+<script type="module" src="/js/iscriviti.js"></script>
+</main></body></html>
