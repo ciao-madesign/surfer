@@ -12,8 +12,25 @@ $('gpx').onchange = run(async () => {
   const sel = pts.filter((_, i) => i % step === 0 || i === pts.length - 1);
   course = { points: sel.map((p) => [p.lat, p.lon, Math.round(p.ele)]), dist: sel.map((p) => p.dist_from_start / 1000), name: f.name.replace(/\.gpx$/i, '') };
   if (!$('name').value) $('name').value = course.name;
-  $('gpxinfo').textContent = `Percorso di ${course.dist.at(-1).toFixed(1)} km caricato.`;
+  $('fname').textContent = f.name;
+  preview();
 });
+
+// anteprima del percorso caricato: distanza, dislivello e profilo altimetrico
+function preview() {
+  const ele = course.points.map((p) => p[2]), d = course.dist, total = d.at(-1);
+  let gain = 0, ref = ele[0];   // dislivello con soglia di 5 m, per non sommare il rumore del GPS
+  for (const e of ele) { if (e - ref >= 5) { gain += e - ref; ref = e; } else if (ref - e >= 5) ref = e; }
+  const min = Math.min(...ele), max = Math.max(...ele);
+  $('pv-km').textContent = `${total.toFixed(1)} km`;
+  $('pv-gain').textContent = `${Math.round(gain)} m`;
+  $('pv-ele').textContent = `${min}–${max} m`;
+  const W = 600, H = 72, span = Math.max(1, max - min);
+  const pts = ele.map((e, i) => `${((d[i] / total) * W).toFixed(1)},${(H - 2 - ((e - min) / span) * (H - 6)).toFixed(1)}`);
+  const svg = $('pv-prof'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = `<path d="M0,${H} L${pts.join(' L')} L${W},${H}Z" fill="rgba(79,209,197,.2)" stroke="#4fd1c5" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
+  $('preview').style.display = 'block';
+}
 
 function kmToCoord(km) {
   const d = course.dist; let i = d.findIndex((x) => x >= km);
