@@ -28,7 +28,7 @@ Fatto:
 - Dati live dietro un'interfaccia (`server/repo.js`): nessun comando Redis nell'handler; suite di conformità comune per repo e archivio (`tests/conformance.test.js`).
 - Handler diviso in moduli: `common`, `races`, `ingest`, `finish`, `views` e lo smistamento in `handler.js`.
 - `/api/v1` (alias dei percorsi attuali) e documentazione in `docs/API.md`.
-- Adattatori per Traccar Client/OsmAnd, OwnTracks e GPSLogger, con guida per Android in `/gestisci` (Traccar Client). **Da provare su un telefono Android.**
+- Adattatori per Traccar Client/OsmAnd, OwnTracks e GPSLogger, con guida per Android in `/gestisci` (Traccar Client). **Non ancora provati su un telefono Android: nella pagina di gestione la guida è segnata «sperimentale» finché non c'è una prova.**
 - Script delle migrazioni: `npm run migrate` (`--dry` per vedere cosa farebbe).
 
 Rimandato (con motivo):
