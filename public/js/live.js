@@ -47,8 +47,8 @@ function addCourse() {
   if (!c) return;
   const coords = c.points.map((p) => [p[1], p[0]]);
   if (!m.getSource('route')) m.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } } });
-  if (!m.getLayer('route-glow')) {
-    m.addLayer({ id: 'route-glow', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#4fd1c5', 'line-width': 10, 'line-opacity': .25 } });
+  if (!m.getLayer('route-casing')) {   // bordo scuro sottile: il percorso resta leggibile anche sul satellite
+    m.addLayer({ id: 'route-casing', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#0a0f14', 'line-width': 7, 'line-opacity': .7 } });
     m.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#4fd1c5', 'line-width': 4 } });
   }
 }
@@ -114,6 +114,11 @@ function drawProfile() {
     ...state.course.checkpoints.map((cp) => mk('line', { x1: x(cp.km), x2: x(cp.km), y1: 0, y2: H, stroke: '#a8b3c2', 'stroke-dasharray': '3 3', 'vector-effect': 'non-scaling-stroke' })),
     ...(state.live?.participants ?? []).filter((p) => p.distKm != null).map((p) =>
       mk('line', { x1: x(p.distKm), x2: x(p.distKm), y1: 0, y2: H, stroke: p.color, 'stroke-width': 3, 'vector-effect': 'non-scaling-stroke' })));
+  // riferimenti in km sotto il profilo, a passo "tondo"
+  const tick = [1, 2, 5, 10, 20, 50].find((t) => c.totalKm / t <= 6) ?? 100;
+  const kms = []; for (let k = 0; k < c.totalKm - tick * 0.4; k += tick) kms.push(k);
+  $('profile-km').replaceChildren(...kms.map((k) => el('span', { style: `left:${(x(k) / W) * 100}%` }, k ? `${k}` : '0 km')),
+    el('span', { style: 'left:100%' }, c.totalKm.toFixed(1)));
   $('profile-info').textContent = `${c.totalKm.toFixed(1)} km · D+ ${c.gain} m · D− ${c.loss} m · quota ${c.minEle}–${c.maxEle} m`;
 }
 
@@ -143,27 +148,35 @@ function runnerCard(p, extra) {
   const s = extra?.stats, st = s && !s.insufficient ? s : null;
   const kpi = (label, value) => el('div', {}, label, el('b', {}, value));
   const card = el('div', { class: 'card runner' },
-    el('div', {}, el('span', { class: 'dot', style: `background:${p.color}` }), el('span', { class: 'name' }, p.name),
-      ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
-    el('div', { class: 'small muted', style: 'text-align:right' }, p.last ? `Ultimo segnale ${fmtTime(p.last.t)} (${fmtAge(p.last.ageSec)})` : 'in attesa del primo segnale'),
-    p.offCourseM != null && p.offCourseM > 300
-      ? el('div', { class: 'small bad', style: 'grid-column:1/3' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): stime sospese`)
-      : p.distKm != null ? el('div', { class: 'small muted', style: 'grid-column:1/3' }, `${p.distKm.toFixed(1)} km percorsi · ${p.remainingKm.toFixed(1)} km all'arrivo`) : '');
+    el('div', { class: 'head' },
+      el('div', {}, el('span', { class: 'dot', style: `background:${p.color}` }), el('span', { class: 'name' }, p.name),
+        ' ', el('span', { class: `small st-${p.status}` }, p.statusLabel)),
+      el('div', { class: 'small muted' }, p.last ? `Ultimo segnale ${fmtTime(p.last.t)} (${fmtAge(p.last.ageSec)})` : 'in attesa del primo segnale')));
+  const off = p.offCourseM != null && p.offCourseM > 300;
+  if (off) card.append(el('div', { class: 'small bad', style: 'margin-top:4px' }, p.offCourseM > 1000 ? `Lontano dal percorso: ${(p.offCourseM / 1000).toFixed(p.offCourseM > 10000 ? 0 : 1)} km` : `Fuori percorso (circa ${Math.round(p.offCourseM / 10) * 10} m): stime sospese`));
+  const eta = st ? (st.etaSuspended ? 'sospeso' : st.etaAt ? fmtTime(st.etaAt) : '–') : '–';
+  if (!off && p.distKm != null) {
+    card.append(el('div', { class: 'key' },
+      kpi('Percorsi', `${p.distKm.toFixed(1)} km`), kpi('All\'arrivo', `${p.remainingKm.toFixed(1)} km`), kpi('Arrivo stimato', eta)));
+  }
+  const rest = [];
   if (st) {
-    const eta = st.etaSuspended ? `sospeso: nessun segnale da ${Math.max(3, Math.round((st.signalAgeSec ?? 0) / 60))} min`
-      : st.etaAt ? `${fmtTime(st.etaAt)} (${st.reliability === 'Supported' ? 'indicativo' : 'dati scarsi'})` : '–';
-    card.append(el('div', { class: 'stats', style: 'grid-column:1/3' },
-      kpi('Arrivo stimato', eta), kpi('Tempo', fmtDur(st.elapsedSec)), kpi('Quota', `${st.ele} m`)),
-      el('details', { class: 'small', style: 'grid-column:1/3', open: openMore.has(p.id), ontoggle: (e) => { if (e.target.open) openMore.add(p.id); else openMore.delete(p.id); } }, el('summary', {}, 'Più dati'),
-        el('div', { class: 'stats' },
-          kpi('D+ / D−', `${st.gain} / ${st.loss} m`), kpi('Velocità media', st.avgSpeedKmh != null ? `${st.avgSpeedKmh} km/h` : '–'),
-          kpi('Passo medio', fmtPace(st.avgPaceSecKm)), kpi('Ultimi 10 min', fmtPace(st.recentPaceSecKm)),
-          kpi('Salita', fmtPace(st.paceByGrade.salita)), kpi('Piano', fmtPace(st.paceByGrade.piano)), kpi('Discesa', fmtPace(st.paceByGrade.discesa)))));
+    if (st.etaSuspended) rest.push(el('p', { class: 'small muted', style: 'margin:8px 0 0' }, `Arrivo stimato sospeso: nessun segnale da ${Math.max(3, Math.round((st.signalAgeSec ?? 0) / 60))} min.`));
+    else if (st.etaAt) rest.push(el('p', { class: 'small muted', style: 'margin:8px 0 0' }, `Arrivo stimato ${st.reliability === 'Supported' ? 'indicativo' : 'con pochi dati: da prendere con cautela'}.`));
+    rest.push(el('div', { class: 'stats' },
+      kpi('Tempo', fmtDur(st.elapsedSec)), kpi('Quota', `${st.ele} m`), kpi('D+ / D−', `${st.gain} / ${st.loss} m`),
+      kpi('Velocità media', st.avgSpeedKmh != null ? `${st.avgSpeedKmh} km/h` : '–'),
+      kpi('Passo medio', fmtPace(st.avgPaceSecKm)), kpi('Ultimi 10 min', fmtPace(st.recentPaceSecKm)),
+      kpi('Salita', fmtPace(st.paceByGrade.salita)), kpi('Piano', fmtPace(st.paceByGrade.piano)), kpi('Discesa', fmtPace(st.paceByGrade.discesa))));
   }
   if (extra?.passages?.length) {
-    const t = el('table', { style: 'grid-column:1/3;margin-top:6px' }, el('tr', {}, ...['Checkpoint', 'Ora', 'Dalla partenza', 'Dall\'ultimo'].map((h) => el('th', {}, h))));
+    const t = el('table', {}, el('tr', {}, ...['Checkpoint', 'Ora', 'Dalla partenza', 'Dall\'ultimo'].map((h) => el('th', {}, h))));
     for (const x of extra.passages) t.append(el('tr', {}, el('td', {}, x.name), el('td', {}, fmtTime(x.t)), el('td', {}, fmtDur(x.elapsedSec)), el('td', {}, fmtDur(x.sinceLastSec))));
-    card.append(t);
+    rest.push(t);
+  }
+  if (rest.length) {
+    card.append(el('details', { class: 'more', open: openMore.has(p.id), ontoggle: (e) => { if (e.target.open) openMore.add(p.id); else openMore.delete(p.id); } },
+      el('summary', {}, 'Più dati'), ...rest));
   }
   return card;
 }
