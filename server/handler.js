@@ -18,7 +18,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   const common = createCommon({ repo, env, now });
   const finish = createFinish({ common, archive, env, now });
   const races = createRaces({ common, finish, archive, env, now });
-  const { ingest, overland } = createIngest({ common, env, now });
+  const { ingest, overland, osmand, owntracks, gpslogger } = createIngest({ common, env, now });
   const { live, courseRoute, stats } = createViews({ common, env, now });
   const { ipId } = common, { report, cron } = finish, { publicCreate, adminRoutes, deviceMe } = races;
 
@@ -34,6 +34,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
     try {
       const parts = path.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean);
       if (parts[0] === 'api') parts.shift();
+      if (parts[0] === 'v1') parts.shift();   // /api/v1/... equivale a /api/...
       const h = Object.fromEntries(Object.entries(headers).map(([a, b]) => [a.toLowerCase(), b]));
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
@@ -56,6 +57,9 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (route === 'device/me' && (method === 'GET' || method === 'DELETE')) return ok(await deviceMe(h, method));
       if (route === 'device/consent' && method === 'POST') return ok(await deviceMe(h, 'POST', body));
       if (route === 'device/overland' && method === 'POST') return ok(await overland(h, query, body));
+      if (route === 'device/osmand' && (method === 'GET' || method === 'POST')) return ok(await osmand(h, query, body));
+      if (route === 'device/owntracks' && method === 'POST') return ok(await owntracks(h, query, body));
+      if (route === 'device/gpslogger' && (method === 'GET' || method === 'POST')) return ok(await gpslogger(h, query, body));
       if (method === 'GET' && route === 'live') return ok(await live(query, h), cache(5));
       if (method === 'GET' && route === 'course') return ok(await courseRoute(query, h), privateCache(60));
       if (method === 'GET' && route === 'stats') return ok(await stats(query, h), cache(15));

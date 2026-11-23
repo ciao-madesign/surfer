@@ -100,25 +100,66 @@ export function createIngest({ common, env, now }) {
     return { ok: true, accepted: rows.length, rejected, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
     } finally { await repo.unlock(lock); }
   }
-  // App "Overland" (iOS, App Store, gratuita): invia lotti GeoJSON a un indirizzo. Il token del dispositivo
-  // può stare nell'indirizzo (?token=) o nell'intestazione Authorization. Risposta attesa: {"result":"ok"}.
-  async function overland(headers, query, body) {
-    const dev = query.token || bearer(headers);
+  // ---------- adattatori per le app di tracciamento ----------
+  // Ogni app invia le posizioni nel suo formato: qui si traducono nel formato interno e si passa dalla stessa
+  // funzione `ingest` (consenso, limiti, filtri GPS e archivio valgono per tutte). Il token del corridore sta
+  // nell'indirizzo (?token=, come chiedono queste app) o nell'intestazione Authorization.
+  const fin = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+  const num0 = (v) => (v == null || v === '' ? null : fin(Number(v)));
+  const goodPoint = (p, t) => isFinite(p.t) && p.t > t - DAY * 1000 && p.t < t + 120000 && fin(p.lat) != null && fin(p.lon) != null
+    && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && (p.ele == null || (p.ele > -500 && p.ele < 9000));
+  // orario in secondi (anche con decimali), in millisecondi o in formato ISO
+  const toMs = (v) => {
+    if (v == null || v === '') return NaN;
+    const n = Number(v);
+    if (isFinite(n)) return n < 1e11 ? Math.round(n * 1000) : Math.round(n);
+    return Date.parse(String(v));
+  };
+  async function forward(dev, pts) {
     if (!dev) throw new HttpError(401, 'Credenziale dispositivo mancante');
-    const t = now();
-    const fin = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+    const auth = { authorization: `Bearer ${dev}` };
+    const good = pts.filter((p) => goodPoint(p, now()));
+    if (!good.length) await ingest(auth, { points: [], status: 'tracking' });
+    for (let i = 0; i < good.length; i += 100) await ingest(auth, { points: good.slice(i, i + 100), status: 'tracking' });
+  }
+
+  // App "Overland" (iOS, gratuita): lotti GeoJSON. Risposta attesa: {"result":"ok"}.
+  async function overland(headers, query, body) {
     const pts = (Array.isArray(body?.locations) ? body.locations : [])
       .filter((f) => f?.geometry?.type === 'Point' && Array.isArray(f.geometry.coordinates))
       .map((f) => ({ t: Date.parse(f.properties?.timestamp), lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0],
-        ele: fin(f.properties?.altitude), acc: fin(f.properties?.horizontal_accuracy) >= 0 ? f.properties.horizontal_accuracy : null }))
-      .filter((p) => isFinite(p.t) && p.t > t - DAY * 1000 && p.t < t + 120000 && fin(p.lat) != null && fin(p.lon) != null
-        && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180 && (p.ele == null || (p.ele > -500 && p.ele < 9000)));
-    const auth = { authorization: `Bearer ${dev}` };
-    if (!pts.length) await ingest(auth, { points: [], status: 'tracking' });
-    for (let i = 0; i < pts.length; i += 100) await ingest(auth, { points: pts.slice(i, i + 100), status: 'tracking' });
+        ele: fin(f.properties?.altitude), acc: fin(f.properties?.horizontal_accuracy) >= 0 ? f.properties.horizontal_accuracy : null }));
+    await forward(query.token || bearer(headers), pts);
     return { result: 'ok' };
   }
 
+  // Traccar Client e altre app che parlano il protocollo OsmAnd (Android e iOS): un punto per richiesta,
+  // parametri nell'indirizzo o nel corpo (id = codice del corridore, lat, lon, timestamp, altitude, accuracy).
+  async function osmand(headers, query, body) {
+    const q = { ...query, ...(body && typeof body === 'object' ? body : {}) };
+    const dev = q.token || q.id || bearer(headers);
+    const pt = { t: q.timestamp == null ? now() : toMs(q.timestamp), lat: num0(q.lat), lon: num0(q.lon), ele: num0(q.altitude), acc: num0(q.accuracy) };
+    await forward(dev, [pt]);
+    return { ok: true };
+  }
 
-  return { ingest, overland };
+  // OwnTracks (modalità HTTP): un punto per richiesta, JSON con _type "location"; risposta attesa: un elenco (anche vuoto).
+  async function owntracks(headers, query, body) {
+    const dev = query.token || bearer(headers);
+    const pts = body?._type === 'location'
+      ? [{ t: toMs(body.tst), lat: num0(body.lat), lon: num0(body.lon), ele: num0(body.alt), acc: num0(body.acc) }] : [];
+    await forward(dev, pts);
+    return [];
+  }
+
+  // GPSLogger (Android): indirizzo personalizzato con segnaposto (%LAT, %LON, %TIME, %ACC, %ALT), in GET o POST.
+  async function gpslogger(headers, query, body) {
+    const q = { ...query, ...(body && typeof body === 'object' ? body : {}) };
+    const dev = q.token || bearer(headers);
+    const pt = { t: q.time == null ? now() : toMs(q.time), lat: num0(q.lat), lon: num0(q.lon), ele: num0(q.alt), acc: num0(q.acc) };
+    await forward(dev, [pt]);
+    return { ok: true };
+  }
+
+  return { ingest, overland, osmand, owntracks, gpslogger };
 }

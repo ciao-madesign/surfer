@@ -697,3 +697,38 @@ test('consenso: data e versione vanno nell\'archivio ma non nel report pubblico'
   const rep = await api('GET', '/api/report', null, {}, { t: end.json.race.reportPath.split('#')[1] });
   assert.equal(rep.json.participants[0].consentAt, undefined);
 });
+
+test('app di tracciamento: OsmAnd/Traccar, OwnTracks e GPSLogger passano dallo stesso ingest', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  const sec = (ms) => Math.floor(ms / 1000);
+  const lat = (km) => String(at(km)[0]);
+  // OsmAnd / Traccar Client: parametri nell'indirizzo, id = codice del corridore, orario in secondi
+  clock.advance(60000);
+  assert.equal((await api('GET', '/api/device/osmand', null, {}, { id: r.dev, lat: lat(0.1), lon: '8', timestamp: String(sec(clock.now())), altitude: '1000', accuracy: '5' })).status, 200);
+  // OwnTracks: JSON con _type location
+  clock.advance(60000);
+  assert.deepEqual((await api('POST', '/api/device/owntracks', { _type: 'location', lat: at(0.3)[0], lon: 8, tst: sec(clock.now()), acc: 6, alt: 1000 }, {}, { token: r.dev })).json, []);
+  // GPSLogger: orario ISO
+  clock.advance(60000);
+  assert.equal((await api('GET', '/api/device/gpslogger', null, {}, { token: r.dev, lat: lat(0.5), lon: '8', time: new Date(clock.now()).toISOString(), acc: '7' })).status, 200);
+  const me = (await api('GET', '/api/device/me', null, { authorization: `Bearer ${r.dev}` })).json;
+  assert.equal(me.points, 3);
+  // codice sbagliato
+  assert.equal((await api('GET', '/api/device/osmand', null, {}, { id: 'sbagliato-sbagliato-sbagliato', lat: '46', lon: '8' })).status, 401);
+});
+
+test('app di tracciamento: senza consenso del corridore nessuna posizione, anche da altre app', async () => {
+  const { api, clock } = setup();
+  const r = await race(api, { noConsent: true });
+  assert.equal((await api('GET', '/api/device/osmand', null, {}, { id: r.dev, lat: lat46(), lon: '8', timestamp: String(Math.floor(clock.now() / 1000)) })).status, 403);
+});
+const lat46 = () => '46.001';
+
+test('API v1: gli stessi percorsi con il prefisso /api/v1', async () => {
+  const { api } = setup();
+  const r = await race(api);
+  assert.equal((await api('GET', '/api/v1/live', null, {}, { t: r.view })).status, 200);
+  assert.equal((await api('GET', '/api/v1/health')).status, 200);
+});

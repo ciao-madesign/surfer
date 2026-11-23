@@ -23,13 +23,20 @@ Regola guida: la soluzione più semplice, gratuita e a basso rischio. Ordine di 
 | Un solo dominio con WizTrail | Nessun vincolo tecnico; pagine su percorsi propri | Decisione su percorso o sottodominio (sezione 6) |
 | Scalare | Cache CDN per chi guarda, limiti, archivio ripetibile | Misurare i comandi Redis con una gara vera; cache per istanza |
 
-## Fase 7 (dopo la beta)
-1. **Interfaccia dello store**: nessun comando Redis nell'handler; poi suddividere in 6 file (`http`, `races`, `ingest`, `finish`, `store`, `archive`) a test verdi. Suite di conformità comune per store e archive.
-2. `endRace` asincrono, esportazione JSON/GPX, runner di migrazioni, cache per istanza per ridurre i comandi Upstash.
-3. `/api/v1` con alias dei percorsi attuali; documentazione dell'API.
-4. Adattatori OsmAnd/Traccar, poi OwnTracks, poi GPSLogger, con guida breve per Android.
-5. Link di gestione rigenerabile; anteprima «come lo vede chi segue».
-6. Rinviare: Cloudflare, app native, integrazioni con Strava/Garmin/Apple/Health Connect, LoRa.
+## Fase 7: stato
+Fatto:
+- Dati live dietro un'interfaccia (`server/repo.js`): nessun comando Redis nell'handler; suite di conformità comune per repo e archivio (`tests/conformance.test.js`).
+- Handler diviso in moduli: `common`, `races`, `ingest`, `finish`, `views` e lo smistamento in `handler.js`.
+- `/api/v1` (alias dei percorsi attuali) e documentazione in `docs/API.md`.
+- Adattatori per Traccar Client/OsmAnd, OwnTracks e GPSLogger, con guida per Android in `/gestisci` (Traccar Client). **Da provare su un telefono Android.**
+- Script delle migrazioni: `npm run migrate` (`--dry` per vedere cosa farebbe).
+
+Rimandato (con motivo):
+- `endRace` asincrono: oggi l'archiviazione dura pochi secondi al massimo e ha un nuovo tentativo giornaliero; si rivede se i tempi crescono.
+- Esportazione JSON/GPX: l'unico dato non già nel report sarebbe lo storico GPS, che per scelta di privacy non esce dal sistema.
+- Cache per istanza per ridurre i comandi Redis: prima misurare il consumo con una gara vera (rischio di dati vecchi, ad esempio sul consenso).
+- Link di gestione rigenerabile e anteprima «come lo vede chi segue».
+- Altri formati di tracciamento oltre ai quattro attuali; Cloudflare, app native, integrazioni con Strava/Garmin/Apple/Health Connect, LoRa.
 
 ## Da fare prima del lancio pubblico
 - Prova su iPhone con Overland: il corridore apre il suo link, dà il consenso, poi parte l'app.

@@ -18,15 +18,15 @@ Produzione: <https://surfer-eta.vercel.app>
 
 ### Come il corridore invia la posizione
 - **Browser del telefono** (`/track`): nessuna installazione. Lo schermo deve restare acceso.
-- **App Overland** (iOS, gratuita): invia anche a schermo spento. Endpoint `/api/device/overland`. Il consenso si dà comunque dal link del corridore.
-- Android a schermo spento: richiede un'app (Traccar, OwnTracks, GPSLogger: vedi [`ROADMAP.md`](ROADMAP.md)).
+- **App Overland** (iOS, gratuita): invia anche a schermo spento. Il consenso si dà comunque dal link del corridore.
+- **Traccar Client** (Android e iOS), **OwnTracks** e **GPSLogger**: indirizzi pronti in [`docs/API.md`](docs/API.md); `/gestisci` guida Traccar Client. Da provare su un telefono Android.
 
 ## Architettura
 
 | Parte | Dove | Note |
 |---|---|---|
-| API (una sola funzione Vercel, regione Francoforte) | `api/index.js` (adattatore), `server/handler.js` | Node.js, una sola dipendenza (driver Neon) |
-| Dati in tempo reale | Upstash Redis (`server/store.js`) | Posizioni, ultimo punto, link: scadenza automatica. In locale: memoria |
+| API (una sola funzione Vercel, regione Francoforte) | `api/index.js` (adattatore), `server/` (`handler`, `common`, `races`, `ingest`, `finish`, `views`) | Node.js, una sola dipendenza (driver Neon); documentata in `docs/API.md` |
+| Dati in tempo reale | Upstash Redis (`server/store.js`, interfaccia in `server/repo.js`) | Posizioni, ultimo punto, link: scadenza automatica. In locale: memoria |
 | Archivio di fine gara | Postgres su Neon (`server/archive.js`, schema in `db/migrations/`) | Solo tempi, statistiche, checkpoint, data del consenso; mai lo storico GPS |
 | Sito e pagine | `public/` | HTML e JavaScript senza framework né bundler |
 | Documentazione interna | `ROADMAP.md`, `docs/pre-dpia.md` | Prossimi passi e valutazione preliminare d'impatto |
@@ -47,13 +47,14 @@ Scelte di semplicità: nessun framework; risposte `live` in cache sulla CDN; dat
 
 ## Provarlo in locale
 ```bash
-npm test          # test automatici (53)
+npm test          # test automatici (60)
+npm run migrate   # applica le migrazioni del database (DATABASE_URL; --dry per provare)
 npm run dev       # ADMIN_KEY=dev, archivio in memoria, http://localhost:3000
 ```
 
 ## Pubblicarlo (gratis)
 1. **Upstash Redis**: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` (prefisso chiavi `trail:`).
-2. **Neon**: `DATABASE_URL`; applica le migrazioni in `db/migrations/` (001–004, a mano).
+2. **Neon**: `DATABASE_URL`; `npm run migrate` applica le migrazioni in `db/migrations/`.
 3. **Vercel**: importa il repository (ramo `main`) e imposta `ADMIN_KEY`, `REPORT_SECRET` (due password lunghe diverse), `CRON_SECRET` e le variabili sopra. Facoltative: `CREATE_PER_DAY`, `MAX_ACTIVE_RACES`.
 4. Cambiando dominio, aggiorna l'indirizzo del sito in `canonical`, `og:url`, `og:image`, `public/sitemap.xml`, `public/robots.txt` e nei dati strutturati di `public/index.html`.
 
@@ -64,7 +65,7 @@ Sorgenti in `public/js/config.js`: Esri World Imagery e OpenTopoMap con attribuz
 `public/logo-surfer.svg`: una «S» morbida che simula una traccia GPX, senza sfondo, con un pallino verde acqua in apertura e uno in chiusura del percorso. Nel footer resta il simbolo bianco di WizTrail (`public/logo-mark.svg`).
 
 ## Stato
-- Provati con test automatici: API, gare multi-utente, link e scadenze, checkpoint, statistiche, filtri GPS, archivio, report, consenso, cancellazione, limiti (53 test).
+- Provati con test automatici: API, gare multi-utente, link e scadenze, checkpoint, statistiche, filtri GPS, archivio, report, consenso, cancellazione, limiti (60 test).
 - Provato sul campo: Overland su iPhone (oltre 3 ore, stabile), prima dell'introduzione del consenso.
 - Da verificare: consenso con Overland su iPhone, archivio su Neon con una gara vera, mappe e meteo in produzione con la CSP, Android.
 

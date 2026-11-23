@@ -87,7 +87,7 @@ function sHow() {
       el('li', {}, 'Leggi le informazioni e dai il consenso.'),
       el('li', {}, 'Tocca «Avvia condivisione» e consenti la posizione.'),
       el('li', {}, ip ? 'Tieni lo schermo acceso e la pagina aperta.' : 'Tieni lo schermo acceso e disattiva il risparmio energetico.')),
-    el('p', { class: 'small muted' }, ip ? 'A schermo spento? Usa l\'app gratuita Overland (sotto).' : 'Su Android, per ora, la pagina deve restare aperta e lo schermo acceso.'),
+    el('p', { class: 'small muted' }, ip ? 'A schermo spento? Usa l\'app gratuita Overland (sotto).' : 'Schermo spento? Usa l\'app gratuita Traccar Client (sotto, dopo aver creato il QR).'),
     el('p', { class: 'small' }, 'Quando compare «Segnale ricevuto ✓», funziona.'));
 }
 
@@ -109,7 +109,12 @@ function sConnect() {
       x && platform === 'iphone' ? el('details', { class: 'small', style: 'margin-top:8px' }, el('summary', {}, 'Con l\'app Overland (anche a schermo spento)'),
         el('p', { class: 'muted' }, 'Scarica «Overland» dall\'App Store e inserisci questi dati.'),
         el('div', { class: 'muted' }, 'Receiver Endpoint'), el('div', { class: 'secret' }, `${base}/api/device/overland`), el('button', { onclick: () => copy(`${base}/api/device/overland`) }, 'Copia indirizzo'),
-        el('div', { class: 'muted', style: 'margin-top:8px' }, 'Access Token (personale)'), el('div', { class: 'secret' }, x.device), el('button', { onclick: () => copy(x.device) }, 'Copia token')) : '');
+        el('div', { class: 'muted', style: 'margin-top:8px' }, 'Access Token (personale)'), el('div', { class: 'secret' }, x.device), el('button', { onclick: () => copy(x.device) }, 'Copia token')) : '',
+      x && platform === 'android' ? el('details', { class: 'small', style: 'margin-top:8px' }, el('summary', {}, 'Con l\'app Traccar Client (anche a schermo spento)'),
+        el('p', { class: 'muted' }, 'Scarica «Traccar Client» (gratuita) dal Play Store e inserisci questi dati. Il corridore deve prima dare il consenso dal suo link.'),
+        el('div', { class: 'muted' }, 'Identificativo del dispositivo'), el('div', { class: 'secret' }, x.device), el('button', { onclick: () => copy(x.device) }, 'Copia identificativo'),
+        el('div', { class: 'muted', style: 'margin-top:8px' }, 'URL del server'), el('div', { class: 'secret' }, `${base}/api/device/osmand`), el('button', { onclick: () => copy(`${base}/api/device/osmand`) }, 'Copia indirizzo'),
+        el('p', { class: 'muted', style: 'margin-top:8px' }, 'Frequenza: 15 secondi. Accuratezza: alta. Poi avvia il servizio e consenti la posizione «sempre».')) : '');
   });
   return el('section', { class: 'card' }, el('h2', {}, 'Collega i telefoni'),
     race.participants.length ? [sHow(), ...cards] : el('p', { class: 'muted' }, 'Aggiungi prima chi corre.'));
