@@ -19,6 +19,7 @@ Produzione: <https://surfer-eta.vercel.app>
 ### Come il corridore invia la posizione
 - **Browser del telefono** (`/track`): nessuna installazione. Lo schermo deve restare acceso.
 - **App Overland** (iOS, gratuita): invia anche a schermo spento. Il consenso si dà comunque dal link del corridore.
+- **App Android nativa** (`android/`, da compilare e provare): GPS a schermo spento, coda offline, consenso nell'app.
 - **Traccar Client** (Android e iOS), **OwnTracks** e **GPSLogger**: indirizzi pronti in [`docs/API.md`](docs/API.md); `/gestisci` guida Traccar Client. Da provare su un telefono Android.
 
 ## Architettura
