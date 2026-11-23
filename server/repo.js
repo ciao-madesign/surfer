@@ -10,12 +10,13 @@ export function createRepo(store, { safetyTtl, maxHistory }) {
   const k = {
     race: (id) => `race:${id}`, course: (id) => `course:${id}`, last: (id) => `last:${id}`,
     pos: (id, p) => `pos:${id}:${p}`, pass: (id) => `pass:${id}`, det: (id) => `det:${id}`,
-    view: (h) => `v:${h}`, dev: (h) => `d:${h}`, org: (h) => `o:${h}`,
+    view: (h) => `v:${h}`, enroll: (h) => `e:${h}`, dev: (h) => `d:${h}`, org: (h) => `o:${h}`,
   };
   const allKeys = (m) => {
     const keys = [k.race(m.id), k.course(m.id), k.last(m.id), k.pass(m.id), k.det(m.id)];
     for (const p of m.participants) keys.push(k.pos(m.id, p.id), k.dev(p.deviceHash));
     if (m.viewHash) keys.push(k.view(m.viewHash));
+    if (m.enrollHash) keys.push(k.enroll(m.enrollHash));
     if (m.orgHash) keys.push(k.org(m.orgHash));
     return keys;
   };
@@ -52,6 +53,11 @@ export function createRepo(store, { safetyTtl, maxHistory }) {
     // nuovo link di visualizzazione: il precedente (se c'è) smette di funzionare
     setViewLink: (raceId, hash, oldHash, ttl) =>
       store.pipeline([['SET', k.view(hash), raceId, 'EX', ttl], ...(oldHash ? [['DEL', k.view(oldHash)]] : [])]),
+    // link di iscrizione dei corridori: stesso schema del link di visualizzazione
+    raceIdByEnroll: (hash) => store.cmd(['GET', k.enroll(hash)]),
+    setEnrollLink: (raceId, hash, oldHash, ttl) =>
+      store.pipeline([['SET', k.enroll(hash), raceId, 'EX', ttl], ...(oldHash ? [['DEL', k.enroll(oldHash)]] : [])]),
+    delEnroll: (hash) => store.cmd(['DEL', k.enroll(hash)]),
     delView: (hash) => store.cmd(['DEL', k.view(hash)]),
     expireView: (hash, secs) => store.cmd(['EXPIRE', k.view(hash), secs]),
 

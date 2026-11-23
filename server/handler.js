@@ -6,7 +6,7 @@ import { createRepo } from './repo.js';
 import { HttpError, bad } from './util.js';
 import { createArchive } from './archive.js';
 import { demoCourse, demoLive, demoStats } from './demo.js';
-import { SAFETY_TTL, MAX_HISTORY, IP_PER_MIN } from './config.js';
+import { SAFETY_TTL, MAX_HISTORY, IP_PER_MIN, IP_PER_DEVICE_MIN } from './config.js';
 import { createCommon } from './common.js';
 import { createFinish } from './finish.js';
 import { createRaces } from './races.js';
@@ -20,7 +20,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   const races = createRaces({ common, finish, archive, env, now });
   const { ingest, overland, osmand, owntracks, gpslogger } = createIngest({ common, env, now });
   const { live, courseRoute, stats } = createViews({ common, env, now });
-  const { ipId } = common, { report, cron } = finish, { publicCreate, adminRoutes, deviceMe } = races;
+  const { ipId } = common, { report, cron } = finish, { publicCreate, adminRoutes, deviceMe, enroll } = races;
 
   // ---------- smistamento ----------
   const NOCACHE = { 'Cache-Control': 'no-store' };
@@ -41,9 +41,9 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       // la CDN usa l'URL come chiave di cache: parametri in più servirebbero solo a saltarla
       if (method === 'GET' && ['live', 'course', 'stats', 'report'].includes(route) && Object.keys(query).some((x) => x !== 't')) throw bad('Richiesta non valida');
       if (route !== 'health' && route !== 'cron/archive' && !route.startsWith('demo/')) {
-        ipk = `rl:ip:${ipId(h)}:${Math.floor(now() / 60000)}`;
+        ipk = `rl:ip${route.startsWith('device/') ? 'd' : ''}:${ipId(h)}:${Math.floor(now() / 60000)}`;
         const n = await repo.hit(ipk, 90);
-        if (n > IP_PER_MIN) throw new HttpError(429, 'Troppe richieste: riprova tra un minuto');
+        if (n > (route.startsWith('device/') ? IP_PER_DEVICE_MIN : IP_PER_MIN)) throw new HttpError(429, 'Troppe richieste: riprova tra un minuto');
       }
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
       if (method === 'GET' && route === 'demo/course') return ok(demoCourse(), privateCache(300));
@@ -53,6 +53,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (route === 'cron/archive') return ok(await cron(h));
       if (route === 'races' && method === 'POST') return ok(await publicCreate(h, body));
       if (parts[0] === 'admin') return ok(await adminRoutes(method, parts.slice(1), body, h, origin));
+      if (route === 'enroll' && method === 'POST') return ok(await enroll(h, body, origin));
       if (route === 'device/positions' && method === 'POST') return ok(await ingest(h, body));
       if (route === 'device/me' && (method === 'GET' || method === 'DELETE')) return ok(await deviceMe(h, method));
       if (route === 'device/consent' && method === 'POST') return ok(await deviceMe(h, 'POST', body));

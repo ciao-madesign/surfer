@@ -175,11 +175,11 @@ test('anomalie GPS: precisione scarsa scartata dalle statistiche', async () => {
   assert.equal(s.samples, 1);
 });
 
-test('massimo 5 partecipanti', async () => {
+test('massimo 20 partecipanti (configurabile)', async () => {
   const { api } = setup();
   const r = await race(api);
-  for (let i = 0; i < 4; i++) assert.equal((await api('POST', `/api/admin/races/${r.id}/participants`, { name: 'P' + i }, ADMIN)).status, 200);
-  assert.equal((await api('POST', `/api/admin/races/${r.id}/participants`, { name: 'Sesto' }, ADMIN)).status, 400);
+  for (let i = 0; i < 19; i++) assert.equal((await api('POST', `/api/admin/races/${r.id}/participants`, { name: 'P' + i }, ADMIN)).status, 200);
+  assert.equal((await api('POST', `/api/admin/races/${r.id}/participants`, { name: 'Ventunesimo' }, ADMIN)).status, 400);
 });
 
 test('conservazione: dopo 24 ore dalla fine i dati non sono più accessibili e vengono cancellati', async () => {
@@ -731,4 +731,50 @@ test('API v1: gli stessi percorsi con il prefisso /api/v1', async () => {
   const r = await race(api);
   assert.equal((await api('GET', '/api/v1/live', null, {}, { t: r.view })).status, 200);
   assert.equal((await api('GET', '/api/v1/health')).status, 200);
+});
+
+test('iscrizione autonoma: il corridore si iscrive con il link, dà il consenso e riceve il suo codice', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  const en = await api('POST', `/api/admin/races/${r.id}/enroll`, {}, ADMIN);
+  assert.equal(en.status, 200); assert.match(en.json.path, /^\/iscriviti#/);
+  const t = en.json.token;
+  const join = (extra = {}) => api('POST', '/api/enroll', { t, name: 'Giulia', accept: true, ageOk: true, ...extra });
+  assert.equal((await join({ accept: false })).status, 400, 'senza consenso non ci si iscrive');
+  const ok = await join();
+  assert.equal(ok.status, 200); assert.equal(ok.json.raceName, 'Trail di prova'); assert.ok(ok.json.deviceToken && ok.json.pairing);
+  // il codice funziona subito: il consenso è già dato
+  clock.advance(1000);
+  assert.equal((await send(api, ok.json.deviceToken, [pt(clock.now(), 0.1)])).status, 200);
+  assert.equal((await api('POST', '/api/enroll', { t: 'x'.repeat(30), name: 'A', accept: true, ageOk: true })).status, 401);
+  // il link si rigenera: il vecchio non vale più
+  const en2 = await api('POST', `/api/admin/races/${r.id}/enroll`, {}, ADMIN);
+  assert.equal((await join({ name: 'Marco' })).status, 401);
+  assert.equal((await api('POST', '/api/enroll', { t: en2.json.token, name: 'Marco', accept: true, ageOk: true })).status, 200);
+  // alla partenza le iscrizioni si chiudono
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  assert.equal((await api('POST', '/api/enroll', { t: en2.json.token, name: 'Tardi', accept: true, ageOk: true })).status, 410);
+  const list = (await api('GET', `/api/admin/races/${r.id}`, null, ADMIN)).json.race.participants;
+  assert.deepEqual(list.map((p) => p.name).sort(), ['Anna', 'Giulia', 'Marco']);
+  assert.equal(new Set(list.map((p) => p.color)).size, 3, 'ognuno ha il suo colore');
+});
+
+test('iscrizione autonoma: tetto rispettato e link disattivabile', async () => {
+  const { api } = setup();
+  const r = await race(api);
+  const t = (await api('POST', `/api/admin/races/${r.id}/enroll`, {}, ADMIN)).json.token;
+  let last;
+  for (let i = 0; i < 19; i++) last = await api('POST', '/api/enroll', { t, name: 'C' + i, accept: true, ageOk: true });
+  assert.equal(last.status, 200);   // con Anna sono 20
+  assert.equal((await api('POST', '/api/enroll', { t, name: 'Extra', accept: true, ageOk: true })).status, 400, 'gara al completo');
+  assert.equal((await api('DELETE', `/api/admin/races/${r.id}/enroll`, null, ADMIN)).status, 200);
+  assert.equal((await api('POST', '/api/enroll', { t, name: 'Dopo', accept: true, ageOk: true })).status, 401);
+});
+
+test('limiti: le app dei corridori hanno un limite per rete più largo (stessa rete alla partenza)', async () => {
+  const { api } = setup();
+  const r = await race(api);
+  let st = 0;
+  for (let i = 0; i < 150; i++) st = (await api('GET', '/api/device/me', null, { authorization: `Bearer ${r.dev}` })).status;
+  assert.equal(st, 200, '150 richieste di corridori dalla stessa rete non vengono fermate');
 });

@@ -106,7 +106,7 @@ export function createCommon({ repo, env, now }) {
 
   const pubParticipant = (p) => ({ id: p.id, name: p.name, color: p.color, consent: !!p.consentAt });
   const pubMeta = (m) => ({ id: m.id, name: m.name, status: m.status, createdAt: m.createdAt, startedAt: m.startedAt,
-    endedAt: m.endedAt, archive: m.archive?.state ?? null, reportPath: reportPath(m), hasLink: !!m.viewHash, participants: m.participants.map(pubParticipant),
+    endedAt: m.endedAt, archive: m.archive?.state ?? null, reportPath: reportPath(m), hasLink: !!m.viewHash, hasEnroll: !!m.enrollHash, participants: m.participants.map(pubParticipant),
     checkpoints: m.checkpoints.map(({ id, name, km, auto }) => ({ id, name, km, auto })) });
 
 

@@ -48,6 +48,41 @@ export function createRaces({ common, finish, archive, env, now }) {
     return createRace(body, true);
   }
 
+  const maxParts = Number(env.MAX_PARTICIPANTS) || MAX_PARTICIPANTS;
+  // Aggiunge un corridore alla gara e crea il suo codice (mostrato una sola volta). `consent`: il consenso è già stato dato.
+  async function addParticipant(m, { name, color, consent = false }) {
+    if (m.participants.length >= maxParts) throw bad(`Massimo ${maxParts} partecipanti`);
+    const dev = token(24), pid = `p${m.participants.length + 1}${shortId().slice(0, 6)}`;
+    const used = new Set(m.participants.map((x) => x.color));
+    const p = { id: pid, name, color: color || COLORS.find((c) => !used.has(c)) || COLORS[m.participants.length % COLORS.length], deviceHash: sha256(dev) };
+    if (consent) { p.consentAt = now(); p.consentVersion = CONSENT_VERSION; }
+    m.participants.push(p);
+    await saveRace(m);
+    await repo.putDevice(p.deviceHash, { raceId: m.id, pid }, lifeTtl(m));
+    return { p, dev };
+  }
+
+  // Iscrizione autonoma: il corridore, con il link di iscrizione, si aggiunge e dà il consenso nello stesso gesto.
+  async function enroll(headers, body, reqOrigin) {
+    const t = String(body?.t || '');
+    if (t.length < 20) throw new HttpError(401, 'Link di iscrizione non valido');
+    const n = await repo.count(`en:${ipId(headers)}:${Math.floor(now() / 86400000)}`, 2 * DAY);
+    if (n > 40) throw new HttpError(429, 'Troppe iscrizioni da questa rete: riprova domani');
+    const raceId = await repo.raceIdByEnroll(sha256(t));
+    if (!raceId) throw new HttpError(401, 'Link di iscrizione non valido o chiuso');
+    if (body?.accept !== true || body?.ageOk !== true) throw bad('Serve il consenso esplicito');
+    const name = text(body?.name, 40, 'Nome');
+    const lock = `lock:enroll:${raceId}`;   // una iscrizione alla volta: il tetto non si supera e nessuno viene perso
+    if (!(await repo.tryLock(lock, 10))) throw new HttpError(429, 'Iscrizione in corso, riprova');
+    try {
+      const m = await loadRace(raceId);
+      if (m.status !== 'draft' || m.enrollHash !== sha256(t)) throw new HttpError(410, 'Le iscrizioni sono chiuse');
+      const { p, dev } = await addParticipant(m, { name, color: null, consent: true });
+      const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
+      return { participant: { id: p.id, name: p.name, color: p.color }, raceName: m.name, deviceToken: dev, pairing };
+    } finally { await repo.unlock(lock); }
+  }
+
   // Cancella un corridore: archivio (se la gara è già archiviata) e dati live. Usata da organizzatore e dal corridore stesso.
   async function removeParticipant(m, p) {
     if (archive.enabled && m.status === 'ended' && m.archive?.state === 'done') {
@@ -123,15 +158,23 @@ export function createRaces({ common, finish, archive, env, now }) {
         return { ok: true };
       }
     }
+    if (sub === 'enroll') {   // link di iscrizione: i corridori si iscrivono da soli, finché la gara non parte
+      if (method === 'POST') {
+        if (m.status !== 'draft') throw bad('Le iscrizioni si possono aprire solo prima della partenza');
+        const t = token(24), h = sha256(t);
+        await repo.setEnrollLink(m.id, h, m.enrollHash, lifeTtl(m));
+        m.enrollHash = h; await saveRace(m);
+        return { token: t, path: `/iscriviti#${t}` };
+      }
+      if (method === 'DELETE') {
+        if (m.enrollHash) await repo.delEnroll(m.enrollHash);
+        m.enrollHash = null; await saveRace(m);
+        return { ok: true };
+      }
+    }
     if (sub === 'participants' && method === 'POST' && parts.length === 3) {
-      if (m.participants.length >= MAX_PARTICIPANTS) throw bad('Massimo 5 partecipanti');
-      const dev = token(24), pid = `p${m.participants.length + 1}${shortId().slice(0, 6)}`;
-      const p = { id: pid, name: text(body?.name, 40, 'Nome'),
-        color: /^#[0-9a-f]{6}$/i.test(body?.color || '') ? body.color : COLORS[m.participants.length % 5],
-        deviceHash: sha256(dev) };
-      m.participants.push(p);
-      await saveRace(m);
-      await repo.putDevice(p.deviceHash, { raceId: m.id, pid }, lifeTtl(m));
+      const { p, dev } = await addParticipant(m, { name: text(body?.name, 40, 'Nome'),
+        color: /^#[0-9a-f]{6}$/i.test(body?.color || '') ? body.color : null });
       const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
       return { participant: pubParticipant(p), deviceToken: dev, pairing };  // il token si vede una sola volta
     }
@@ -199,5 +242,5 @@ export function createRaces({ common, finish, archive, env, now }) {
   }
 
 
-  return { createRace, publicCreate, removeParticipant, deviceMe, adminRoutes };
+  return { createRace, publicCreate, removeParticipant, deviceMe, adminRoutes, enroll };
 }
