@@ -1,5 +1,5 @@
 // Logica delle API, indipendente da Vercel: handle({method, path, query, headers, body}) -> {status, headers, json}
-import { getJSON } from './store.js';
+import { createRepo } from './repo.js';
 import { HttpError, bad, token, shortId, sha256, safeEqual, hmac } from './util.js';
 import { buildCourse, project, haversine, encodePoint, decodePoint, runnerStats } from './geo.js';
 import { createArchive } from './archive.js';
@@ -30,16 +30,10 @@ const STATUS_LABEL = { waiting: 'In attesa', tracking: 'Segnale attivo', paused:
 
 export function createHandler({ store, env = process.env, now = Date.now, archive = createArchive(env) }) {
   const courseCache = new Map();  // cache per istanza (lambda "calda"), 60 s
-
-  // ---------- accesso ai dati ----------
-  const k = {
-    race: (id) => `race:${id}`, course: (id) => `course:${id}`, last: (id) => `last:${id}`,
-    pos: (id, p) => `pos:${id}:${p}`, pass: (id) => `pass:${id}`, det: (id) => `det:${id}`,
-    view: (h) => `v:${h}`, dev: (h) => `d:${h}`, org: (h) => `o:${h}`,
-  };
+  const repo = createRepo(store, { safetyTtl: SAFETY_TTL, maxHistory: MAX_HISTORY });   // unico punto che parla con il database live
 
   async function loadRace(id, { allowExpired = false } = {}) {
-    const m = await getJSON(store, k.race(id));
+    const m = await repo.getRace(id);
     if (!m) throw new HttpError(404, 'Gara non trovata');
     if (!allowExpired && m.status === 'ended' && now() > m.endedAt + KEEP_AFTER_END * 1000) throw new HttpError(410, 'Dati scaduti');
     return m;
@@ -50,24 +44,17 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       : m.status === 'live' ? (m.startedAt ?? now()) + LIVE_TTL * 1000 : m.createdAt + DRAFT_TTL * 1000;
     return Math.max(60, Math.ceil((end - now()) / 1000));
   };
-  const saveRace = (m, ttl = lifeTtl(m)) => store.cmd(['SET', k.race(m.id), JSON.stringify(m), 'EX', ttl]);
+  const saveRace = (m, ttl = lifeTtl(m)) => repo.saveRace(m, ttl);
 
   async function loadCourse(id) {
     const c = courseCache.get(id);
     if (c && c.exp > now()) return c.v;
-    const v = await getJSON(store, k.course(id));
+    const v = await repo.getCourse(id);
     if (v) courseCache.set(id, { v, exp: now() + 60000 });
     return v;
   }
 
-  function allKeys(m) {
-    const keys = [k.race(m.id), k.course(m.id), k.last(m.id), k.pass(m.id), k.det(m.id)];
-    for (const p of m.participants) { keys.push(k.pos(m.id, p.id), k.dev(p.deviceHash)); }
-    if (m.viewHash) keys.push(k.view(m.viewHash));
-    if (m.orgHash) keys.push(k.org(m.orgHash));
-    return keys;
-  }
-  const expireRace = (m, secs) => store.pipeline(allKeys(m).map((key) => ['EXPIRE', key, secs]));
+  const expireRace = (m, secs) => repo.expireRace(m, secs);
 
   // ---------- autenticazione ----------
   function admin(headers) {
@@ -79,7 +66,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const org = headers['x-org-token'];
     if (org) {
       if (org.length < 20) throw new HttpError(401, 'Link organizzatore non valido');
-      const raceId = await store.cmd(['GET', k.org(sha256(org))]);
+      const raceId = await repo.raceIdByOrg(sha256(org));
       if (!raceId) throw new HttpError(401, 'Link organizzatore non valido o scaduto');
       return { raceId };
     }
@@ -91,7 +78,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   async function viewer(query, headers) {
     const t = query.t;   // solo nell'indirizzo: la CDN usa l'URL come chiave di cache
     if (!t || t.length < 20) throw new HttpError(401, 'Link non valido');
-    const raceId = await store.cmd(['GET', k.view(sha256(t))]);
+    const raceId = await repo.raceIdByView(sha256(t));
     if (!raceId) throw new HttpError(401, 'Link non valido, revocato o scaduto');
     return loadRace(raceId);
   }
@@ -148,10 +135,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     let orgToken = null;
     if (withOrganizer) { orgToken = token(24); meta.orgHash = sha256(orgToken); }
     await saveRace(meta);
-    const ops = [['SADD', 'races', id]];
-    if (course) ops.push(['SET', k.course(id), JSON.stringify(course), 'EX', DRAFT_TTL]);
-    if (orgToken) ops.push(['SET', k.org(meta.orgHash), id, 'EX', DRAFT_TTL]);
-    await store.pipeline(ops);
+    await repo.initRace(meta, course, DRAFT_TTL);
     return { race: pubMeta(meta), course: course && { totalKm: course.totalKm, gain: course.gain, loss: course.loss },
       ...(orgToken ? { organizerToken: orgToken, organizerPath: `/gestisci#${orgToken}` } : {}) };
   }
@@ -171,9 +155,9 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   async function publicCreate(headers, body) {
     const day = Math.floor(now() / 86400000);
     const key = `rc:${ipId(headers)}:${day}`;
-    const [n] = await store.pipeline([['INCR', key], ['EXPIRE', key, 2 * DAY]]);
+    const n = await repo.count(key, 2 * DAY);
     if (n > (Number(env.CREATE_PER_DAY) || 5)) throw new HttpError(429, 'Troppe gare create oggi: riprova domani');
-    const active = await store.cmd(['SMEMBERS', 'races']);
+    const active = await repo.activeRaceIds();
     if (active.length >= (Number(env.MAX_ACTIVE_RACES) || 500)) throw new HttpError(503, 'Servizio al completo: riprova tra poco');
     return createRace(body, true);
   }
@@ -186,14 +170,14 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     }
     m.participants = m.participants.filter((x) => x !== p);
     await saveRace(m, m.status === 'ended' && m.archive?.state === 'pending' ? SAFETY_TTL : lifeTtl(m));
-    await store.pipeline([['DEL', k.dev(p.deviceHash)], ['DEL', k.pos(m.id, p.id)], ['HDEL', k.last(m.id), p.id]]);
+    await repo.deleteParticipant(m.id, p);
   }
 
   // Il corridore, con il proprio codice di accesso, vede cosa è salvato su di lui e può cancellarlo.
   async function deviceMe(headers, method, body) {
     const dev = bearer(headers);
     if (!dev) throw new HttpError(401, 'Credenziale dispositivo mancante');
-    const ref = await getJSON(store, k.dev(sha256(dev)));
+    const ref = await repo.deviceRef(sha256(dev));
     if (!ref) throw new HttpError(401, 'Dispositivo non autorizzato');
     const m = await loadRace(ref.raceId);
     const p = m.participants.find((x) => x.id === ref.pid);
@@ -205,8 +189,8 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       if (!p.consentAt) { p.consentAt = now(); p.consentVersion = CONSENT_VERSION; await saveRace(m); }
       return { ok: true, consentAt: p.consentAt };
     }
-    const l = await store.cmd(['HGET', k.last(m.id), p.id]);
-    return { name: p.name, raceName: m.name, raceStatus: m.status, consent: !!p.consentAt, consentAt: p.consentAt ?? null, points: l ? JSON.parse(l).n ?? 0 : 0 };
+    const l = await repo.getLast(m.id, p.id);
+    return { name: p.name, raceName: m.name, raceStatus: m.status, consent: !!p.consentAt, consentAt: p.consentAt ?? null, points: l?.n ?? 0 };
   }
 
   // ---------- rotte amministratore ----------
@@ -216,11 +200,11 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     if (parts[0] !== 'races') throw new HttpError(404, 'Non trovato');
     if (parts.length === 1) {
       if (method === 'GET') {
-        const ids = scope.raceId ? [scope.raceId] : await store.cmd(['SMEMBERS', 'races']);
+        const ids = scope.raceId ? [scope.raceId] : await repo.activeRaceIds();
         const out = [];
         for (const id of ids) {
-          const m = await getJSON(store, k.race(id));
-          if (!m) { await store.cmd(['SREM', 'races', id]); continue; }
+          const m = await repo.getRace(id);
+          if (!m) { await repo.dropActive(id); continue; }
           out.push({ id, name: m.name, status: m.status, createdAt: m.createdAt, participants: m.participants.length });
         }
         return { races: out };
@@ -236,10 +220,10 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const sub = parts[2];
     if (!sub) {
       if (method === 'GET') {
-        const last = toObj(await store.cmd(['HGETALL', k.last(m.id)]));
+        const last = await repo.getAllLast(m.id);
         const race = pubMeta(m);
         race.participants = race.participants.map((p) => {
-          const l = last[p.id] ? JSON.parse(last[p.id]) : null;
+          const l = last[p.id] || null;
           return { ...p, received: l ? { rcv: l.rcv, t: l.t, status: l.status, points: l.n ?? null, offCourseM: l.off ?? null,
             lat: l.lat ?? null, lon: l.lon ?? null } : null };
         });
@@ -249,7 +233,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
         if (archive.enabled) {   // prima l'archivio: se non riesce, non si perde il modo di riprovare
           try { await archive.deleteRace(m.id); } catch (e) { console.log(JSON.stringify({ ev: 'delete-failed', race: m.id, err: String(e.message || e).slice(0, 120) })); throw new HttpError(503, 'Cancellazione non riuscita: riprova tra poco'); }
         }
-        await store.pipeline([...allKeys(m).map((key) => ['DEL', key]), ['SREM', 'races', m.id], ['SREM', 'archq', m.id]]);
+        await repo.deleteRace(m);
         return { ok: true };
       }
     }
@@ -261,7 +245,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
         deviceHash: sha256(dev) };
       m.participants.push(p);
       await saveRace(m);
-      await store.cmd(['SET', k.dev(p.deviceHash), JSON.stringify({ raceId: m.id, pid }), 'EX', lifeTtl(m)]);
+      await repo.putDevice(p.deviceHash, { raceId: m.id, pid }, lifeTtl(m));
       const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
       return { participant: pubParticipant(p), deviceToken: dev, pairing };  // il token si vede una sola volta
     }
@@ -272,7 +256,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       const dev = token(24), oldHash = p.deviceHash;
       p.deviceHash = sha256(dev);
       await saveRace(m);
-      await store.pipeline([['SET', k.dev(p.deviceHash), JSON.stringify({ raceId: m.id, pid: p.id }), 'EX', lifeTtl(m)], ['DEL', k.dev(oldHash)]]);
+      await repo.replaceDevice(p.deviceHash, { raceId: m.id, pid: p.id }, oldHash, lifeTtl(m));
       const pairing = Buffer.from(JSON.stringify({ u: reqOrigin, t: dev, n: p.name })).toString('base64url');
       return { participant: pubParticipant(p), deviceToken: dev, pairing };
     }
@@ -293,14 +277,12 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       if (method === 'POST') {
         const ttl = lifeTtl(m);   // il link dura quanto la gara: fino a 24 ore dopo la fine
         const t = token(24), h = sha256(t);
-        const ops = [['SET', k.view(h), m.id, 'EX', ttl]];
-        if (m.viewHash) ops.push(['DEL', k.view(m.viewHash)]);   // il vecchio link smette di funzionare
-        await store.pipeline(ops);
+        await repo.setViewLink(m.id, h, m.viewHash, ttl);   // il vecchio link smette di funzionare
         m.viewHash = h; await saveRace(m);
         return { token: t, path: `/live#${t}`, expiresInHours: ttl / 3600 };
       }
       if (method === 'DELETE') {
-        if (m.viewHash) await store.cmd(['DEL', k.view(m.viewHash)]);
+        if (m.viewHash) await repo.delView(m.viewHash);
         m.viewHash = null; await saveRace(m);
         return { ok: true };
       }
@@ -324,8 +306,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       const p = m.participants.find((x) => x.id === body?.participantId);
       if (!cp || !p) throw new HttpError(404, 'Checkpoint o partecipante non trovato');
       const t = body.t == null ? now() : num(body.t, now() - 7 * DAY * 1000, now() + 120000, 't');
-      await store.cmd(['HSET', k.pass(m.id), `${cp.id}:${p.id}`, String(t)]);
-      await store.cmd(['EXPIRE', k.pass(m.id), SAFETY_TTL]);
+      await repo.setPassage(m.id, `${cp.id}:${p.id}`, t);
       return { ok: true, t };
     }
     throw new HttpError(404, 'Non trovato');
@@ -335,8 +316,8 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   // Riepilogo da portare su Neon: nessuna coordinata GPS, solo tempi e statistiche finali.
   async function buildSummary(m) {
     const course = await loadCourse(m.id);
-    const reads = await store.pipeline([['HGETALL', k.pass(m.id)], ...m.participants.map((p) => ['LRANGE', k.pos(m.id, p.id), 0, -1])]);
-    const pass = toObj(reads[0]);
+    const data = await repo.readRace(m.id, m.participants.map((p) => p.id));
+    const pass = data.pass;
     const cps = m.checkpoints;           // già ordinati per km
     return {
       id: m.id, name: m.name, accountId: m.accountId ?? null, startedAt: m.startedAt, endedAt: m.endedAt,
@@ -346,7 +327,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       expiresAt: m.accountId ? null : m.endedAt + ANON_REPORT_DAYS * DAY * 1000,
       checkpoints: cps.map((c, i) => ({ idx: i, name: c.name, km: c.km, radius: c.radius })),
       participants: m.participants.map((p, i) => {
-        const rows = reads[i + 1].map(decodePoint);
+        const rows = data.rows[i].map(decodePoint);
         let stats = null;
         if (course && rows.length) { stats = { ...runnerStats(course, rows, m.startedAt, m.endedAt), etaSec: null, etaAt: null }; }
         const passages = cps.map((c, idx) => (pass[`${c.id}:${p.id}`] ? { cp: idx, t: Number(pass[`${c.id}:${p.id}`]) } : null)).filter(Boolean);
@@ -380,15 +361,15 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const ttl = m.archive?.state === 'pending' ? SAFETY_TTL : Math.max(60, left);
     await saveRace(m, ttl);
     await expireRace(m, ttl);
-    if (m.viewHash) await store.cmd(['EXPIRE', k.view(m.viewHash), Math.max(60, left)]);   // il link di chi segue cade 24 ore dopo la fine, anche se il report è in attesa
-    await store.cmd([m.archive?.state === 'pending' ? 'SADD' : 'SREM', 'archq', m.id]);
+    if (m.viewHash) await repo.expireView(m.viewHash, Math.max(60, left));   // il link di chi segue cade 24 ore dopo la fine, anche se il report è in attesa
+    await repo.queueArchive(m.id, m.archive?.state === 'pending');
   }
 
   async function endRace(m) {
     m.status = 'ended'; m.endedAt = now(); m.reportSalt = token(12);
     await tryArchive(m);
     await applyRetention(m);
-    await store.cmd(['SREM', 'races', m.id]);
+    await repo.dropActive(m.id);
   }
   async function retryArchive(m) { await tryArchive(m); await applyRetention(m); }
 
@@ -398,14 +379,14 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     if (!env.CRON_SECRET) throw new HttpError(503, 'Cron non configurato (CRON_SECRET)');
     if (!safeEqual(bearer(headers), env.CRON_SECRET)) throw new HttpError(401, 'Non autorizzato');
     const out = { autoEnded: 0, archived: 0, stillPending: 0, purged: 0 };
-    for (const id of await store.cmd(['SMEMBERS', 'races'])) {
-      const m = await getJSON(store, k.race(id));
-      if (!m) { await store.cmd(['SREM', 'races', id]); continue; }
+    for (const id of await repo.activeRaceIds()) {
+      const m = await repo.getRace(id);
+      if (!m) { await repo.dropActive(id); continue; }
       if (m.status === 'live' && m.startedAt && now() - m.startedAt > AUTO_END_HOURS * 3600000) { await endRace(m); out.autoEnded++; }
     }
-    for (const id of await store.cmd(['SMEMBERS', 'archq'])) {
-      const m = await getJSON(store, k.race(id));
-      if (!m || m.archive?.state !== 'pending') { await store.cmd(['SREM', 'archq', id]); continue; }
+    for (const id of await repo.archiveQueue()) {
+      const m = await repo.getRace(id);
+      if (!m || m.archive?.state !== 'pending') { await repo.queueArchive(id, false); continue; }
       await retryArchive(m);
       if (m.archive.state === 'done') out.archived++; else out.stillPending++;
     }
@@ -445,11 +426,11 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
   async function ingest(headers, body) {
     const dev = bearer(headers);
     if (!dev) { console.log(JSON.stringify({ ev: 'ingest-denied', why: 'no-token' })); throw new HttpError(401, 'Credenziale dispositivo mancante'); }
-    const ref = await getJSON(store, k.dev(sha256(dev)));
+    const ref = await repo.deviceRef(sha256(dev));
     if (!ref) { console.log(JSON.stringify({ ev: 'ingest-denied', why: 'unknown-token' })); throw new HttpError(401, 'Dispositivo non autorizzato'); }
     const minute = Math.floor(now() / 60000);
     const rlKey = `rl:${ref.raceId}:${ref.pid}:${minute}`;   // per gara e corridore
-    const [count] = await store.pipeline([['INCR', rlKey], ['EXPIRE', rlKey, 90]]);
+    const count = await repo.count(rlKey, 90);
     if (count > RATE_PER_MIN) throw new HttpError(429, 'Troppe richieste');
 
     const m = await loadRace(ref.raceId);
@@ -459,7 +440,7 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     if (!me.consentAt) throw new HttpError(403, 'Il corridore non ha ancora dato il consenso');
     // una sola richiesta alla volta per corridore: evita che due invii ravvicinati si sovrascrivano
     const lock = `lock:${m.id}:${ref.pid}`;
-    if (!(await store.cmd(['SET', lock, '1', 'NX', 'EX', 15]))) throw new HttpError(429, 'Invio già in corso, riprova');
+    if (!(await repo.tryLock(lock, 15))) throw new HttpError(429, 'Invio già in corso, riprova');
     try {
     const status = ['tracking', 'paused', 'no_gps'].includes(body?.status) ? body.status : 'tracking';
     const raw = Array.isArray(body?.points) ? body.points : [];
@@ -481,18 +462,16 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
       acc: p.acc == null ? null : num(p.acc, 0, 100000, 'precisione'),
     })).sort((a, b) => a.t - b.t);
 
-    const lastRaw = await store.cmd(['HGET', k.last(m.id), ref.pid]);
-    const last = lastRaw ? JSON.parse(lastRaw) : null;
+    const last = await repo.getLast(m.id, ref.pid);
     const fresh = pts.filter((p) => last?.t == null || p.t > last.t);   // idempotente: ignora i duplicati
     const course = await loadCourse(m.id);
     const cps = course ? m.checkpoints.filter((c) => c.auto) : [];
     let pass = {}, det = {};
     if (cps.length && fresh.length) {
-      const [pa, de] = await store.pipeline([['HGETALL', k.pass(m.id)], ['HGETALL', k.det(m.id)]]);
-      pass = toObj(pa); det = toObj(de);
+      ({ pass, det } = await repo.getPassDet(m.id));
     }
 
-    const rows = [], writes = [];
+    const rows = [], passSet = [], detSet = [], detDel = [];
     let km = last?.km ?? 0, fin = !!last?.fin, lastPt = last, off = last?.off ?? null;
     let anom = last?.anom ?? 0, progAnom = last?.panom ?? 0, rejected = stale;
     for (const p of fresh) {
@@ -524,20 +503,17 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
           if (haversine(p.lat, p.lon, c.lat, c.lon) <= Math.max(c.radius, p.acc ? Math.min(p.acc, 100) : 0)) {
             const [n, first] = (det[key] || '0:0').split(':').map(Number);
             const nn = n + 1, ft = n ? first : p.t;
-            if (nn >= 2) { pass[key] = String(ft); writes.push(['HSET', k.pass(m.id), key, String(ft)]); delete det[key]; writes.push(['HDEL', k.det(m.id), key]); }
-            else { det[key] = `${nn}:${ft}`; writes.push(['HSET', k.det(m.id), key, det[key]]); }
-          } else if (det[key]) { delete det[key]; writes.push(['HDEL', k.det(m.id), key]); }
+            if (nn >= 2) { pass[key] = String(ft); passSet.push([key, String(ft)]); delete det[key]; detDel.push(key); }
+            else { det[key] = `${nn}:${ft}`; detSet.push([key, det[key]]); }
+          } else if (det[key]) { delete det[key]; detDel.push(key); }
         }
       }
     }
     const rec = { ...(lastPt || { t: null }), status, rcv: t, fin, off, anom, panom: progAnom, n: (last?.n ?? 0) + rows.length };
-    const ops = [['HSET', k.last(m.id), ref.pid, JSON.stringify(rec)], ['EXPIRE', k.last(m.id), SAFETY_TTL], ...writes];
-    if (rows.length) ops.push(['RPUSH', k.pos(m.id, ref.pid), ...rows], ['LTRIM', k.pos(m.id, ref.pid), -MAX_HISTORY, -1],
-      ['EXPIRE', k.pos(m.id, ref.pid), SAFETY_TTL]);
-    await store.pipeline(ops);
+    await repo.commitIngest(m.id, ref.pid, { rec, rows, passSet, detSet, detDel });
     console.log(JSON.stringify({ ev: 'ingest', race: m.id, p: ref.pid, got: pts.length, new: rows.length, rej: rejected, st: status }));
     return { ok: true, accepted: rows.length, rejected, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
-    } finally { await store.cmd(['DEL', lock]); }
+    } finally { await repo.unlock(lock); }
   }
   // App "Overland" (iOS, App Store, gratuita): invia lotti GeoJSON a un indirizzo. Il token del dispositivo
   // può stare nell'indirizzo (?token=) o nell'intestazione Authorization. Risposta attesa: {"result":"ok"}.
@@ -557,17 +533,16 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     for (let i = 0; i < pts.length; i += 100) await ingest(auth, { points: pts.slice(i, i + 100), status: 'tracking' });
     return { result: 'ok' };
   }
-  const toObj = (flat) => { const o = {}; for (let i = 0; i < (flat || []).length; i += 2) o[flat[i]] = flat[i + 1]; return o; };
 
   // ---------- rotte osservatore ----------
   async function live(query, headers) {
     const m = await viewer(query, headers);
     const course = await loadCourse(m.id);
-    const last = toObj(await store.cmd(['HGETALL', k.last(m.id)]));
+    const last = await repo.getAllLast(m.id);
     const t = now();
     return { race: { name: m.name, status: m.status, startedAt: m.startedAt, endedAt: m.endedAt, totalKm: course?.totalKm ?? null, reportPath: reportPath(m) },
       participants: m.participants.map((p) => {
-        const l = last[p.id] ? JSON.parse(last[p.id]) : null;
+        const l = last[p.id] || null;
         const st = participantStatus(m, l);
         return { id: p.id, name: p.name, color: p.color, status: st, statusLabel: STATUS_LABEL[st],
           last: l?.t != null ? { t: l.t, lat: l.lat, lon: l.lon, ele: l.ele, ageSec: Math.round((t - l.t) / 1000) } : null,
@@ -587,14 +562,13 @@ export function createHandler({ store, env = process.env, now = Date.now, archiv
     const m = await viewer(query, headers);
     const course = await loadCourse(m.id);
     if (!course) return { participants: [], note: 'Nessuna traccia caricata' };
-    const reads = await store.pipeline([['HGETALL', k.pass(m.id)], ...m.participants.map((p) => ['LRANGE', k.pos(m.id, p.id), 0, -1]), ['HGETALL', k.last(m.id)]]);
-    const pass = toObj(reads[0]);
-    const lastAll = toObj(reads[m.participants.length + 1]);
+    const data = await repo.readRace(m.id, m.participants.map((p) => p.id));
+    const pass = data.pass, lastAll = data.last;
     const out = m.participants.map((p, i) => {
-      const rows = reads[i + 1].map(decodePoint);
+      const rows = data.rows[i].map(decodePoint);
       const s = rows.length ? runnerStats(course, rows, m.startedAt, now()) : { insufficient: true };
       // senza segnale recente la stima d'arrivo non è credibile: viene sospesa (e torna da sola)
-      const l = lastAll[p.id] ? JSON.parse(lastAll[p.id]) : null;
+      const l = lastAll[p.id] || null;
       if (m.status === 'live' && l && !l.fin && !s.insufficient) {
         const age = l.t != null ? now() - l.t : Infinity;
         if (participantStatus(m, l) !== 'tracking' || age > STALE_MS) {
@@ -632,8 +606,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (method === 'GET' && ['live', 'course', 'stats', 'report'].includes(route) && Object.keys(query).some((x) => x !== 't')) throw bad('Richiesta non valida');
       if (route !== 'health' && route !== 'cron/archive' && !route.startsWith('demo/')) {
         ipk = `rl:ip:${ipId(h)}:${Math.floor(now() / 60000)}`;
-        const n = await store.cmd(['INCR', ipk]);
-        if (n === 1) await store.cmd(['EXPIRE', ipk, 90]);
+        const n = await repo.hit(ipk, 90);
         if (n > IP_PER_MIN) throw new HttpError(429, 'Troppe richieste: riprova tra un minuto');
       }
       if (route === 'health') return ok({ ok: true, store: store.kind, time: now() });
@@ -653,7 +626,7 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       if (method === 'GET' && route === 'stats') return ok(await stats(query, h), cache(15));
       throw new HttpError(404, 'Non trovato');
     } catch (e) {
-      if (e instanceof HttpError && e.status === 401 && ipk) { try { await store.cmd(['INCRBY', ipk, 5]); } catch { /* il limite resta quello già contato */ } }   // un accesso sbagliato pesa 6 richieste
+      if (e instanceof HttpError && e.status === 401 && ipk) { try { await repo.penalize(ipk, 5); } catch { /* il limite resta quello già contato */ } }   // un accesso sbagliato pesa 6 richieste
       if (e instanceof HttpError) return { status: e.status, headers: NOCACHE, json: { error: e.message } };
       console.error(e);
       return { status: 500, headers: NOCACHE, json: { error: 'Errore interno' } };
