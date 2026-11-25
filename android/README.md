@@ -8,7 +8,7 @@ App nativa per il corridore: invia la posizione GPS a Surfer anche a schermo spe
 - `HomeActivity`: scelta del ruolo (Spettatore, Runner, Organizzatore); ricorda l'ultima scelta e la riapre da sola. «Torna alla scelta» è in ogni schermata di ruolo.
 - `RunnerActivity`: il corridore (collegamento, consenso, condivisione). Un link `/track` lo apre direttamente.
 - `ViewerActivity`, `OrganizerActivity`: per ora solo titolo e ritorno alla scelta; il contenuto arriva nelle fasi C e D della `ROADMAP.md`. I loro link (`/live`, `/gestisci`) non sono ancora intercettati dall'app e si aprono nel browser.
-- `BaseActivity`: grafica comune; `Role`: ruolo salvato; testi della schermata iniziale in `res/values/strings.xml` (le frasi sotto i pulsanti sono vuote finché non vengono scritte).
+- `BaseActivity`: grafica comune; `Role`: ruolo salvato; testi della schermata iniziale in `res/values/strings.xml`.
 
 ## Come funziona (corridore)
 - **Collegamento**: tre modi. 1) *Scansiona il QR code* dentro l'app (scanner di Google, serve Google Play Services, nessun permesso fotocamera). 2) Il QR di `/gestisci` è un link `…/track#codice`: con la fotocamera del telefono Android propone di aprirlo con *Surfer Live*. 3) Incolla il link o il codice nel campo.
