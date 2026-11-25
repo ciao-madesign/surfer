@@ -25,11 +25,11 @@ class TrackingService : Service(), LocationListener {
         @Volatile var lastFix = 0L
         @Volatile var lastAcc = 0f
         @Volatile var message: String? = null
-        lateinit var uploader: Uploader
+        private lateinit var instance: Uploader
 
         fun start(c: Context) = c.startForegroundService(Intent(c, TrackingService::class.java))
         fun stop(c: Context) = c.stopService(Intent(c, TrackingService::class.java))
-        fun uploader(c: Context): Uploader { if (!::uploader.isInitialized) uploader = Uploader(c.applicationContext); return uploader }
+        fun uploader(c: Context): Uploader { if (!::instance.isInitialized) instance = Uploader(c.applicationContext); return instance }
     }
 
     private val io = Executors.newSingleThreadExecutor()
