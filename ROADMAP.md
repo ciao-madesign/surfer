@@ -23,6 +23,16 @@ Regola guida: la soluzione più semplice, gratuita e a basso rischio. Ordine di 
 | Un solo dominio con WizTrail | Nessun vincolo tecnico; pagine su percorsi propri | Decisione su percorso o sottodominio (sezione 6) |
 | Scalare | Cache CDN per chi guarda, limiti, archivio ripetibile | Misurare i comandi Redis con una gara vera; cache per istanza |
 
+## Piano dei profili dell'app (decisione del 25/11/2026)
+Ordine di lavoro: **B → C → A → D**.
+- **B · I tre ingressi.** Schermata iniziale con «segui una gara», «devi correre», «devi organizzare»; ricorda l'ultima scelta e ha un tasto per cambiare ruolo; un link di gara apre direttamente il ruolo giusto. Nessun account. Codice dell'app diviso in una schermata per ruolo.
+- **C · Spettatore.** Elenco delle gare seguite (link salvati), mappa live nell'app riusando `/live`, notifiche essenziali (partenza, checkpoint, arrivo, segnale perso). **Notifiche push con Firebase (confermato).** Servono: progetto Firebase, invio dal server, registrazione del telefono per gara, privacy aggiornata. Quelle tra corridori e di gruppo vengono dopo.
+- **A · Corridore: chiusura.** Test del nuovo ZIP, chiave di firma, prova su telefono reale, primo APK (guida: `docs/android-distribuzione.md`).
+- **D · Organizzatore.** Prima un ingresso comodo a `/gestisci` con il link salvato; l'app nativa per l'organizzatore dopo, con dati d'uso reali.
+- Per ogni funzione: sito e app danno la stessa esperienza (API, colori, font, testi); altrimenti la funzione è segnata «solo sito» o «solo app».
+
+**Regola di lavoro per i testi:** i testi visibili all'utente (etichette, messaggi, avvisi, privacy) non si decidono in autonomia: si propongono e li approva il responsabile prima di entrare nel codice.
+
 ## Fase 7: stato
 Fatto:
 - Dati live dietro un'interfaccia (`server/repo.js`): nessun comando Redis nell'handler; suite di conformità comune per repo e archivio (`tests/conformance.test.js`).
