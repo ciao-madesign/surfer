@@ -21,6 +21,18 @@ Stato: idea per sviluppo futuro, con valutazione di novembre 2026 (sotto). Nessu
 
 **Da rimandare**: pubblicità, Garmin, app nostra, Cloudflare, mappa pubblica, gruppi.
 
+## Decisioni (25 novembre 2026)
+
+Prevalgono sulle indicazioni precedenti di questo documento.
+
+1. **L'app nativa è la priorità.** Per attirare utenti serve un'esperienza fluida, che solo un'app può dare: niente app esterne (Overland, Traccar…) e niente schermo acceso. Le app esterne e il tracker da browser restano come alternative.
+2. **Prima Android.** La strada per iOS resta sempre aperta: la faremo quando ci sarà budget per l'account sviluppatore Apple. Le API e il formato dei dati restano comuni, così iOS non richiede di rifare il lavoro.
+3. **Smartwatch e tracker GPS inclusi, ma dopo l'app.** Satellitari Garmin (MapShare) e orologi Garmin (Connect IQ) restano nel piano, nella fase successiva.
+4. **Hosting: si resta su Vercel**, a meno che esista un'alternativa gratuita che consenta l'uso commerciale. Cloudflare non è considerata adatta (vedi «Migrazione»).
+5. **Limite di 20 corridori per gara mantenuto per ora**, per non sovraccaricare Redis (Upstash). Verrà tolto passando a un servizio più grande (Redis o altro). A quel punto si valuterà la monetizzazione per coprire i costi.
+
+**Da decidere**: la bozza Android esistente (branch `claude/modest-ramanujan-apnome`) è in Kotlin nativo. Va confermata come base o rifatta con Capacitor, come suggerito più sotto. Il Kotlin nativo è adatto a un'app che fa solo il tracking; Capacitor riusa più pagine del sito.
+
 ## Primo passo: iscrizione autonoma (piano)
 
 Obiettivo: il corridore si iscrive da solo con un link, dà il consenso e riceve il proprio tracker. Nessun gruppo, nessuna nuova infrastruttura; tetto da 5 a 20 corridori.
@@ -140,11 +152,11 @@ La struttura attuale lo rende semplice: le API sono una sola funzione indipenden
 
 | Opzione | Pro | Contro |
 |---|---|---|
-| **Cloudflare (Pages + Workers)** | Piano gratuito generoso, uso commerciale ammesso, cache vicina agli spettatori | Ambiente diverso da Node, servono piccoli adattamenti |
+| **Cloudflare (Pages + Workers)** | Piano gratuito generoso, cache vicina agli spettatori. Uso commerciale sul piano gratuito: considerato non ammesso (decisione del 25/11) | Ambiente diverso da Node, servono piccoli adattamenti |
 | **Netlify** | Molto simile a Vercel, migrazione rapida | Limiti gratuiti simili, da verificare |
 | **Piccolo server (VPS, pochi euro al mese)** | Costo fisso e prevedibile, nessun limite di richieste. È anche l'unica strada per i tracker GPS dedicati (vedi sotto) | Va tenuto aggiornato e monitorato |
 
-Consiglio: Cloudflare per pagine e API. Un piccolo server va aggiunto solo se si decide di supportare i tracker GPS dedicati.
+Decisione (25/11): si resta su Vercel, salvo un'alternativa gratuita che consenta l'uso commerciale. Un piccolo server va aggiunto solo se si decide di supportare i tracker GPS dedicati.
 
 ## Smartwatch e tracker GPS
 
@@ -164,7 +176,7 @@ Consiglio, in ordine: 1) satellitari Garmin tramite MapShare (poco lavoro, grand
 
 Per il corridore cambia poco: in iscrizione sceglie «telefono», «orologio Garmin» o «satellitare» e segue le istruzioni dedicate.
 
-## App nostra per il tracking (più avanti)
+## App nostra per il tracking (priorità, prima Android)
 
 Invece di affidarsi a Overland o al browser, il tracking lo fa un'app nostra per iPhone e Android. Non è troppo complesso da sviluppare: la parte impegnativa è mantenerla e farla approvare dagli store.
 
@@ -210,6 +222,8 @@ Consiglio: la prima strada.
 1. Prima: Traccar Client (iPhone e Android, una sola guida) e OwnTracks (configurazione con un link) come alternative a Overland, subito disponibili e quasi a costo zero. Per Android anche OsmAnd e Locus Map, spesso già installate (invio verso Surfer da verificare).
 2. Poi: l'app Surfer, quando le gare aperte hanno un utilizzo reale. Diventa l'unica app consigliata; le altre restano per chi le usa già.
 
+**Aggiornamento (25/11)**: l'app diventa la priorità, a partire da Android (vedi «Decisioni»). Primo passo: una prova tecnica su telefoni Android reali, con almeno 3 ore a schermo spento, consumo della batteria e perdita di rete.
+
 ## Percorso consigliato (a fasi)
 
 **Fase 1: gara aperta minima**
@@ -228,23 +242,27 @@ Consiglio: la prima strada.
 - Frequenza di invio adattiva in base al numero di corridori.
 - Mappa pubblica facoltativa con classifica per checkpoint.
 
-**Fase 4: dispositivi**
+**Ordine aggiornato (25/11)**: l'app nostra (Fase 5) passa davanti alle Fasi 2–4 e si fa prima su Android. La Fase 1 è realizzata (iscrizione autonoma, tetto 20).
+
+**Fase 4: dispositivi** (dopo l'app)
 - Satellitari Garmin via MapShare.
 - App per orologi Garmin.
 
-**Fase 5: app nostra**
-- App per iPhone e Android con tracking in background, notifiche di partenza e invio differito senza segnale.
+**Fase 5: app nostra** (priorità)
+- Prima Android: tracking in background, notifiche di partenza e invio differito senza segnale.
+- iPhone quando c'è budget per l'account Apple (la bozza in `ios/` resta come base).
 - Poi app per Apple Watch e Wear OS.
 
 **Fase 6: extra**
 - Notifiche push, lista pettorali importata, vista allenatore con tempi intermedi della squadra.
 - Spazio sponsor della gara e pubblicità sulla pagina degli spettatori.
-- Eventuale migrazione (Cloudflare) e piccolo server per i tracker economici.
+- Passaggio a un servizio dati più grande per togliere il tetto di 20 corridori, insieme alla valutazione della monetizzazione.
+- Piccolo server per i tracker economici, se servirà.
 
 ## Domande aperte
-- Tetto iniziale di corridori per gara aperta: 30? 50?
 - Pubblicità con circuito esterno o solo sponsor diretti?
-- Quando migrare: prima di introdurre la pubblicità?
+- Esiste un hosting gratuito che consenta l'uso commerciale? Altrimenti si resta su Vercel.
+- Bozza Android: Kotlin nativo o Capacitor?
 - Email obbligatoria, facoltativa o assente?
 - Gara pubblica (mappa con tutti) da subito o solo più avanti?
 - Chi è titolare dei dati: va deciso con un professionista prima del lancio.
