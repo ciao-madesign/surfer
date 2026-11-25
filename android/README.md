@@ -2,7 +2,7 @@
 
 App nativa per il corridore: invia la posizione GPS a Surfer anche a schermo spento, senza browser né app di terzi. Stessa logica dell'app iPhone (`ios/`): frequenza adattiva 15 s (corsa) / 30 s (lento) / 60 s (sosta), coda su disco senza rete, consenso esplicito, «Interrompi» cancella i punti non inviati.
 
-> **Non compilata né provata**: scritta senza Android SDK. Se Android Studio segnala errori, mandami il testo e lo correggo.
+> **Provata su emulatore (25/11/2026)**: compila (serve JDK 17 per Gradle), collegamento, consenso, invio dei punti e visualizzazione in `/live` funzionano. **Non ancora provata su telefono reale**: schermo spento a lungo, rete assente, risparmio energetico, batteria.
 
 ## Come funziona
 - **Collegamento**: il QR di `/gestisci` è un link `…/track#codice`. Scansionato con la fotocamera, Android propone di aprirlo con *Surfer Live* (se non compare, incolla il link nell'app).
