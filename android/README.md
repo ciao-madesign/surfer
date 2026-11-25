@@ -1,0 +1,25 @@
+# App Surfer Live (Android)
+
+App nativa per il corridore: invia la posizione GPS a Surfer anche a schermo spento, senza browser né app di terzi. Stessa logica dell'app iPhone (`ios/`): frequenza adattiva 15 s (corsa) / 30 s (lento) / 60 s (sosta), coda su disco senza rete, consenso esplicito, «Interrompi» cancella i punti non inviati.
+
+> **Non compilata né provata**: scritta senza Android SDK. Se Android Studio segnala errori, mandami il testo e lo correggo.
+
+## Come funziona
+- **Collegamento**: il QR di `/gestisci` è un link `…/track#codice`. Scansionato con la fotocamera, Android propone di aprirlo con *Surfer Live* (se non compare, incolla il link nell'app).
+- **Consenso** dato nell'app (stesso testo e stessa API del sito: `/api/device/consent`).
+- **Condivisione**: servizio in primo piano con notifica sempre visibile; il token è salvato solo nello spazio privato dell'app. Dopo un riavvio del telefono **non riparte da sola**.
+- **Cancella i miei dati**: `DELETE /api/device/me` e scollegamento.
+- Nessuna libreria esterna (solo API Android), nessun tracker, nessun account Google.
+
+## Compilare
+1. Android Studio → *Open* → cartella `android/` (il wrapper Gradle viene generato da Studio).
+2. Telefono Android con *Opzioni sviluppatore → Debug USB*, poi **Run ▶**.
+3. Per distribuire un APK: *Build → Generate Signed Bundle / APK*.
+
+## Da provare sul telefono
+Schermo spento 30 minuti, galleria/tunnel senza rete e ripristino, risparmio energetico, telefoni con gestione batteria aggressiva (Xiaomi, Samsung, Huawei: usa il pulsante «Consenti uso batteria senza limiti»), autonomia.
+
+## Passi successivi
+- Dominio: il link è agganciato a `surfer-eta.vercel.app` (`AndroidManifest.xml`); cambiando dominio va aggiornato.
+- Link verificati (apertura diretta senza scelta): servono `/.well-known/assetlinks.json` e `android:autoVerify`, dopo aver fissato la firma dell'app.
+- Scanner QR dentro l'app, icona definitiva, pubblicazione su Play Store o APK dal sito.

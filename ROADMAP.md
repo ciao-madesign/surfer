@@ -59,7 +59,7 @@ Primo passo realizzato: iscrizione autonoma con link (`/iscriviti`), fino a 20 c
 - Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-surfer.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
 - Landing: controllare le foto su telefono e computer; decidere se usare la foto dell'escursione; demo con percorso e checkpoint di esempio (citare l'organizzatore del tracciato o chiedere il permesso).
 - Checkpoint scelti direttamente sulla mappa.
-- Android a schermo spento: richiede un'app (vedi sopra).
+- Android a schermo spento: app nativa in `android/` (prima bozza, non ancora compilata né provata su telefono). Da fare: compilazione, prova sul campo, link verificati, scanner QR, distribuzione (Play Store o APK).
 - Profilo con chiave (scade dopo 90 giorni senza accesso, massimo 1 anno) o con email (conferma dopo 1 anno, eliminazione a 1 anno + 60 giorni) e dashboard «Le mie gare»: sul database solo tempi, statistiche e, per i profili, il percorso.
 
 ## 6. Un solo dominio con WizTrail
@@ -69,6 +69,7 @@ Obiettivo: evitare due domini separati.
 - Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/surfer/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
 
 ## Decisioni prese
+- App nativa (25/11/2026): Kotlin nativo per Android, Swift per iOS, nessuna dipendenza esterna. Scartato Capacitor: il GPS a schermo spento dipenderebbe da un plugin gratuito meno affidabile o da uno a pagamento. Le app condividono API e formato dei dati; un guscio Capacitor resta possibile in futuro riusando il servizio GPS Kotlin.
 - Mappe: si tengono Esri World Imagery e OpenTopoMap con attribuzione (da rivalutare prima di aprire a molti utenti).
 - Dati dopo la gara: su Neon nome, tempi, statistiche e consenso restano 3 giorni, legati solo all'id del partecipante nella gara (mai a IP o dispositivo); l'IP compare solo come hash con sale giornaliero nel contatore anti-abuso (2 giorni) e nei log di Vercel.
 
