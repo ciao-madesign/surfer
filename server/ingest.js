@@ -1,7 +1,7 @@
 // Ricezione delle posizioni dei corridori (browser/app) e adattatore per l'app Overland.
 import { HttpError, bad, token, shortId, sha256, safeEqual, hmac } from './util.js';
 import { buildCourse, project, haversine, encodePoint, decodePoint, runnerStats } from './geo.js';
-import { DAY, KEEP_AFTER_END, SAFETY_TTL, DRAFT_TTL, LIVE_TTL, MAX_PARTICIPANTS, CONSENT_VERSION, MAX_HISTORY, STALE_MS, MAX_BATCH, RATE_PER_MIN, IP_PER_MIN, ANON_REPORT_DAYS, AUTO_END_HOURS, MAX_ACC, MAX_SPEED, MAX_ANOM, OFF_COURSE_M, MAX_PROG_ANOM, COLORS, STATUS_LABEL } from './config.js';
+import { DAY, KEEP_AFTER_END, SAFETY_TTL, DRAFT_TTL, LIVE_TTL, MAX_PARTICIPANTS, CONSENT_VERSION, MAX_HISTORY, STALE_MS, MAX_BATCH, RATE_PER_MIN, IP_PER_MIN, ANON_REPORT_DAYS, AUTO_END_HOURS, MAX_ACC, MAX_SPEED, MAX_ANOM, OFF_COURSE_M, MAX_PROG_ANOM, BACK_KM, MAX_BACK_ANOM, COLORS, STATUS_LABEL } from './config.js';
 
 export function createIngest({ common, env, now }) {
   const { repo, loadRace, lifeTtl, saveRace, loadCourse, expireRace, admin, authorize, bearer, viewer, num, text, parseCoursePoints,
@@ -58,7 +58,7 @@ export function createIngest({ common, env, now }) {
 
     const rows = [], passSet = [], detSet = [], detDel = [];
     let km = last?.km ?? 0, fin = !!last?.fin, lastPt = last, off = last?.off ?? null;
-    let anom = last?.anom ?? 0, progAnom = last?.panom ?? 0, rejected = stale;
+    let anom = last?.anom ?? 0, progAnom = last?.panom ?? 0, backAnom = last?.banom ?? 0, rejected = stale;
     for (const p of fresh) {
       // 1) campioni inutilizzabili: precisione pessima, oppure salto di posizione impossibile
       if (p.acc != null && p.acc > MAX_ACC) { rejected++; continue; }
@@ -76,6 +76,12 @@ export function createIngest({ common, env, now }) {
           const maxJump = dt == null ? Infinity : 0.4 + (dt * MAX_SPEED) / 1000;
           if (pr.km - km <= maxJump || progAnom >= MAX_PROG_ANOM) { km = Math.max(km, pr.km); progAnom = 0; }
           else progAnom++;
+          // Autoguarigione: la progressiva non torna mai indietro per un singolo scarto del GPS, ma se il corridore resta
+          // chiaramente sul percorso molto prima del punto registrato (salto avanti sbagliato, ripartenza), si riallinea.
+          // Dopo l'arrivo no: l'arrivo è definitivo.
+          if (!fin && pr.offM <= 150 && pr.km < km - BACK_KM) {
+            if (++backAnom >= MAX_BACK_ANOM) { km = pr.km; backAnom = 0; progAnom = 0; }
+          } else backAnom = 0;
         }
       }
       rows.push(encodePoint(p, km));
@@ -94,7 +100,7 @@ export function createIngest({ common, env, now }) {
         }
       }
     }
-    const rec = { ...(lastPt || { t: null }), status, rcv: t, fin, off, anom, panom: progAnom, n: (last?.n ?? 0) + rows.length };
+    const rec = { ...(lastPt || { t: null }), status, rcv: t, fin, off, anom, panom: progAnom, banom: backAnom, n: (last?.n ?? 0) + rows.length };
     await repo.commitIngest(m.id, ref.pid, { rec, rows, passSet, detSet, detDel });
     console.log(JSON.stringify({ ev: 'ingest', race: m.id, p: ref.pid, got: pts.length, new: rows.length, rej: rejected, st: status }));
     return { ok: true, accepted: rows.length, rejected, duplicates: pts.length - fresh.length, raceStatus: m.status, serverTime: t };
