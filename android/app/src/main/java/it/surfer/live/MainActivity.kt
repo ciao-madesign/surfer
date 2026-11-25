@@ -15,6 +15,9 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import java.util.concurrent.Executors
 
 /** Schermata unica: collega → consenso → avvia/interrompi. UI costruita nel codice per non avere altri file. */
@@ -29,6 +32,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var info: TextView
     private lateinit var err: TextView
+    private lateinit var scanBtn: Button
     private lateinit var codeBox: EditText
     private lateinit var pairBtn: Button
     private lateinit var ageBox: CheckBox
@@ -50,7 +54,8 @@ class MainActivity : Activity() {
         setContentView(ScrollView(this).apply { addView(root) })
         title = tv("Surfer Live", 26f).add()
         status = tv("", 17f).add()
-        codeBox = EditText(this).apply { hint = "Incolla il link o il codice dell'organizzatore"; inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE; minLines = 2 }.add()
+        scanBtn = btn("Scansiona il QR code") { scan() }.add()
+        codeBox = EditText(this).apply { hint = "Oppure incolla qui il link o il codice"; inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE; minLines = 2 }.add()
         pairBtn = btn("Collega") { doPair(codeBox.text.toString()) }.add()
         consentText = tv("Durante la gara la tua posizione e il tuo nome sono visibili a chi ha il link della gara. Le posizioni vengono cancellate 24 ore dopo la fine; il report con i tempi resta 3 giorni. Puoi cancellare i tuoi dati in qualsiasi momento da questa app.", 14f).add()
         ageBox = CheckBox(this).apply { text = "Ho almeno 14 anni, oppure sono il genitore o tutore e acconsento per un minore."; setOnCheckedChangeListener { _, c -> agreeBtn.isEnabled = c } }.add()
@@ -72,6 +77,13 @@ class MainActivity : Activity() {
     private fun handle(i: Intent?) { i?.data?.let { u -> doPair(u.toString()); intent = Intent() } }
 
     override fun onResume() { super.onResume(); pairing = Pairing.load(this); if (pairing != null && consent == null) loadMe(); render() }
+
+    private fun scan() {
+        val opts = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+        GmsBarcodeScanning.getClient(this, opts).startScan()
+            .addOnSuccessListener { b -> b.rawValue?.let { doPair(it) } }
+            .addOnFailureListener { err.text = "Scanner non disponibile su questo telefono: incolla il link nel campo qui sotto." }
+    }
 
     private fun doPair(raw: String) {
         val p = Pairing.parse(raw) ?: run { err.text = "Codice non valido. Chiedi un nuovo QR all'organizzatore."; return }
@@ -131,7 +143,7 @@ class MainActivity : Activity() {
     private fun render() {
         val paired = pairing != null
         val sharing = TrackingService.running
-        codeBox.visibility = vis(!paired); pairBtn.visibility = vis(!paired)
+        scanBtn.visibility = vis(!paired); codeBox.visibility = vis(!paired); pairBtn.visibility = vis(!paired)
         val needConsent = paired && consent == false
         consentText.visibility = vis(needConsent); ageBox.visibility = vis(needConsent); agreeBtn.visibility = vis(needConsent)
         agreeBtn.isEnabled = ageBox.isChecked
@@ -141,7 +153,7 @@ class MainActivity : Activity() {
         title.text = if (paired) pairing!!.name else "Surfer Live"
         TrackingService.message?.let { err.text = it }
         status.text = when {
-            !paired -> "Apri il link del tuo QR oppure incolla qui il codice."
+            !paired -> "Scansiona il QR dell'organizzatore oppure incolla il link."
             consent == null -> "Verifico il collegamento…"
             consent == false -> "Serve il tuo consenso per condividere la posizione."
             !sharing -> "Condivisione ferma: la tua posizione non viene inviata."
