@@ -11,4 +11,23 @@
     <string name="role_viewer_desc">Guarda la gara in diretta.</string>
     <string name="role_runner_desc">Condividi la tua posizione.</string>
     <string name="role_organizer_desc">Crea e gestisci una gara.</string>
+
+    <!-- Spettatore: testi approvati dal responsabile (25/11/2026) -->
+    <string name="events_title">Eventi</string>
+    <string name="events_add">Aggiungi</string>
+    <string name="events_empty">Nessun evento aggiunto</string>
+    <string name="unfollow_title">Smettere di seguire questo evento?</string>
+    <string name="unfollow_confirm">Smetti di seguire</string>
+    <string name="cancel">Annulla</string>
+    <string name="add_title">Aggiungi evento</string>
+    <string name="add_hint">Incolla il link dell\'evento</string>
+    <string name="scan_qr">Scansiona il QR code</string>
+    <string name="add_confirm">Aggiungi</string>
+    <string name="link_invalid">Link non valido</string>
+    <string name="already_added">Hai già aggiunto questo evento</string>
+    <string name="event_unnamed">Evento senza nome</string>
+    <string name="event_expired">Link scaduto o revocato</string>
+    <string name="event_ended">Gara conclusa</string>
+    <!-- Da confermare: stesso testo già usato nella schermata Runner -->
+    <string name="scanner_unavailable">Scanner non disponibile su questo telefono: incolla il link nel campo qui sotto.</string>
 </resources>

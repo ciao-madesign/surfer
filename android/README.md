@@ -7,7 +7,8 @@ App nativa per il corridore: invia la posizione GPS a Surfer anche a schermo spe
 ## Struttura (fase B)
 - `HomeActivity`: scelta del ruolo (Spettatore, Runner, Organizzatore); ricorda l'ultima scelta e la riapre da sola. «Torna alla scelta» è in ogni schermata di ruolo.
 - `RunnerActivity`: il corridore (collegamento, consenso, condivisione). Un link `/track` lo apre direttamente.
-- `ViewerActivity`, `OrganizerActivity`: per ora solo titolo e ritorno alla scelta; il contenuto arriva nelle fasi C e D della `ROADMAP.md`. I loro link (`/live`, `/gestisci`) non sono ancora intercettati dall'app e si aprono nel browser.
+- `ViewerActivity` (fase C, prima parte): elenco «Eventi»; si aggiunge da link incollato, QR o aprendo un link `/live`; si rimuove con il cestino rosso (con conferma). `EventActivity` mostra la gara dentro l'app (pagina `/live` del sito in una vista web, limitata al nostro dominio). Le notifiche (Firebase) sono la seconda parte della fase C.
+- `OrganizerActivity`: per ora solo titolo e ritorno alla scelta (fase D); il link `/gestisci` si apre ancora nel browser.
 - `BaseActivity`: grafica comune; `Role`: ruolo salvato; testi della schermata iniziale in `res/values/strings.xml`.
 
 ## Come funziona (corridore)

@@ -24,7 +24,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Un link di gara apre direttamente il ruolo giusto. Per ora solo /track (runner): /live (spettatore) e /gestisci (organizzatore) si aggiungono quando le loro schermate avranno un contenuto -->
+        <!-- Un link di gara apre direttamente il ruolo giusto. /track = runner, /live = spettatore. /gestisci (organizzatore) si aggiunge quando la sua schermata avrà un contenuto -->
         <activity android:name=".RunnerActivity" android:exported="true" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -33,7 +33,15 @@
                 <data android:scheme="https" android:host="surfer-eta.vercel.app" android:path="/track" />
             </intent-filter>
         </activity>
-        <activity android:name=".ViewerActivity" android:exported="false" />
+        <activity android:name=".ViewerActivity" android:exported="true" android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="surfer-eta.vercel.app" android:path="/live" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".EventActivity" android:exported="false" />
         <activity android:name=".OrganizerActivity" android:exported="false" />
 
         <!-- Scarica in anticipo il modulo dello scanner, così funziona subito anche senza rete. -->

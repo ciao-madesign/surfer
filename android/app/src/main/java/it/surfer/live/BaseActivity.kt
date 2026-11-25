@@ -7,6 +7,9 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
 /** Base di tutte le schermate: stessi colori e font del sito, intestazione con il logo, tasto per tornare alla scelta del ruolo. */
 open class BaseActivity : Activity() {
@@ -52,6 +55,14 @@ open class BaseActivity : Activity() {
                 text = "SURFER · LIVE"; textSize = 12f; typeface = mono; letterSpacing = 0.18f; setTextColor(col(R.color.teal)); setPadding(dp(12), 0, 0, 0)
             })
         }.add(0)
+    }
+
+    /** Scanner QR di Google. Se non è disponibile mostra il messaggio e non fa altro. */
+    protected fun scanQr(onResult: (String) -> Unit) {
+        val opts = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+        GmsBarcodeScanning.getClient(this, opts).startScan()
+            .addOnSuccessListener { b -> b.rawValue?.let { onResult(it) } }
+            .addOnFailureListener { Toast.makeText(this, getString(R.string.scanner_unavailable), Toast.LENGTH_LONG).show() }
     }
 
     /** Dimentica il ruolo scelto e riapre la schermata di scelta. */
