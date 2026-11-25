@@ -1,0 +1,14 @@
+<resources>
+    <!-- Stessi colori del sito (colors_and_type.css) -->
+    <color name="bg">#0a0f14</color>
+    <color name="panel">#0f151c</color>
+    <color name="card">#121a22</color>
+    <color name="ink">#e8f2ff</color>
+    <color name="muted">#a8b3c2</color>
+    <color name="faint">#7b8da3</color>
+    <color name="border">#2a394d</color>
+    <color name="teal">#4fd1c5</color>
+    <color name="teal_deep">#002b2b</color>
+    <color name="warn">#ffb020</color>
+    <color name="error">#ff6b6b</color>
+</resources>

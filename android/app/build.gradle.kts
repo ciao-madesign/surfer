@@ -16,4 +16,8 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
 }
-// Nessuna libreria esterna: solo le API di Android (meno da aggiornare, nessun tracker di terzi).
+dependencies {
+    // Scanner QR di Google (Play Services): nessun permesso fotocamera, nessun codice nostro da mantenere.
+    // Se il telefono non ha i Play Services, resta il campo per incollare il link.
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+}

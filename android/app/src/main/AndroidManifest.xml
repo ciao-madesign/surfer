@@ -14,7 +14,7 @@
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/AppTheme">
 
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask">
             <intent-filter>
@@ -29,6 +29,9 @@
                 <data android:scheme="https" android:host="surfer-eta.vercel.app" android:path="/track" />
             </intent-filter>
         </activity>
+
+        <!-- Scarica in anticipo il modulo dello scanner, così funziona subito anche senza rete. -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />
 
         <service android:name=".TrackingService" android:exported="false"
             android:foregroundServiceType="location" />
