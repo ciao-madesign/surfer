@@ -100,15 +100,18 @@ export function runnerStats(course, rows, startT, nowMs) {
   const t0 = startT ?? pts[0].t;
   const elapsedS = Math.max(0, (last.t - t0) / 1000);
   const distKm = last.km;
-  const eles = [];
-  for (const p of pts) eles.push(eleAt(course, p.km));
-  const { gain, loss } = gainLoss(eles, 3);
+  // Dislivello a tratti: se la progressiva è stata riallineata all'indietro, il salto non conta come salita o discesa.
+  let gain = 0, loss = 0, run = [];
+  const flush = () => { if (run.length) { const g = gainLoss(run, 3); gain += g.gain; loss += g.loss; run = []; } };
+  pts.forEach((p, i) => { if (i && p.km < pts[i - 1].km - 0.5) flush(); run.push(eleAt(course, p.km)); });
+  flush();
 
   // Passo medio su finestre di almeno 150 m e 60 s; classi di pendenza dalla traccia
   const classes = { salita: { km: 0, s: 0 }, piano: { km: 0, s: 0 }, discesa: { km: 0, s: 0 } };
   let anchor = pts[0];
   for (const p of pts) {
     const dKm = p.km - anchor.km, dS = (p.t - anchor.t) / 1000;
+    if (dKm < -0.5) { anchor = p; continue; }   // progressiva riallineata all'indietro: si riparte da qui
     if (dKm >= 0.15 && dS >= 60) {
       if (dKm / dS * 1000 < 8) { // < 8 m/s: ignora salti GPS
         const g = gradeAtKm(course, (p.km + anchor.km) / 2);
