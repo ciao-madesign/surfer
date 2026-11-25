@@ -66,6 +66,7 @@ Obiettivo: evitare due domini separati.
 - Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/surfer/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
 
 ## Decisioni prese
+- App nativa (25/11/2026): Kotlin nativo per Android, Swift per iOS, nessuna dipendenza esterna. Scartato Capacitor: il GPS a schermo spento dipenderebbe da un plugin gratuito meno affidabile o da uno a pagamento. Le app condividono API e formato dei dati; un guscio Capacitor resta possibile in futuro riusando il servizio GPS Kotlin.
 - Mappe: si tengono Esri World Imagery e OpenTopoMap con attribuzione (da rivalutare prima di aprire a molti utenti).
 - Dati dopo la gara: su Neon nome, tempi, statistiche e consenso restano 3 giorni, legati solo all'id del partecipante nella gara (mai a IP o dispositivo); l'IP compare solo come hash con sale giornaliero nel contatore anti-abuso (2 giorni) e nei log di Vercel.
 
