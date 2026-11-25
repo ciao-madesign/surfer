@@ -59,6 +59,7 @@ Primo passo realizzato: iscrizione autonoma con link (`/iscriviti`), fino a 20 c
 - Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-surfer.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
 - Landing: controllare le foto su telefono e computer; decidere se usare la foto dell'escursione; demo con percorso e checkpoint di esempio (citare l'organizzatore del tracciato o chiedere il permesso).
 - Checkpoint scelti direttamente sulla mappa.
+- Più avanti: creazione ufficiale di un design system completo (colori, tipografia, componenti, testi), unico per sito e app Android (e iOS in futuro), così i canali restano allineati. Oggi si usano i valori di WizTrail in `public/css/colors_and_type.css`.
 - Android a schermo spento: richiede un'app (vedi sopra).
 - Profilo con chiave (scade dopo 90 giorni senza accesso, massimo 1 anno) o con email (conferma dopo 1 anno, eliminazione a 1 anno + 60 giorni) e dashboard «Le mie gare»: sul database solo tempi, statistiche e, per i profili, il percorso.
 
