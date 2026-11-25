@@ -778,3 +778,48 @@ test('limiti: le app dei corridori hanno un limite per rete più largo (stessa r
   for (let i = 0; i < 150; i++) st = (await api('GET', '/api/device/me', null, { authorization: `Bearer ${r.dev}` })).status;
   assert.equal(st, 200, '150 richieste di corridori dalla stessa rete non vengono fermate');
 });
+
+// ---------- avanzamento sul percorso: casi limite ----------
+async function walk(api, clock, dev, from, to, n) {   // n punti a intervalli di 15 s, da `from` a `to` km (to = from: fermo)
+  for (let i = 0; i < n; i++) {
+    clock.advance(15000);
+    const km = from + (to - from) * (i / Math.max(1, n - 1));
+    assert.ok([200, 410].includes((await send(api, dev, [pt(clock.now() - 500, km)])).status));
+  }
+}
+const distOf = async (api, r) => (await api('GET', '/api/live', null, {}, { t: r.view })).json.participants[0];
+
+test('avanzamento: un salto avanti sbagliato del GPS si corregge da solo quando il corridore resta indietro', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  await walk(api, clock, r.dev, 0, 1, 25);
+  await walk(api, clock, r.dev, 8, 8, 12);                       // salto sbagliato: il sistema finisce per crederci
+  assert.ok((await distOf(api, r)).distKm > 7.5);
+  await walk(api, clock, r.dev, 1, 2, 25);                       // il corridore vero è ancora al km 1–2
+  const p = await distOf(api, r);
+  assert.ok(Math.abs(p.distKm - 2) < 0.2, `distKm=${p.distKm}`);
+  assert.equal(p.status, 'tracking');
+});
+
+test('avanzamento: pochi scarti indietro non fanno arretrare la progressiva', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  await walk(api, clock, r.dev, 0, 3, 75);
+  await walk(api, clock, r.dev, 2, 2, 5);                        // 5 invii indietro di 1 km: meno della soglia
+  await walk(api, clock, r.dev, 3, 3.3, 8);
+  assert.ok((await distOf(api, r)).distKm >= 3.2);
+});
+
+test('avanzamento: dopo l\'arrivo lo stato e la distanza restano, anche se il telefono riparte dall\'inizio', async () => {
+  const { api, clock } = setup();
+  const r = await race(api);
+  await api('POST', `/api/admin/races/${r.id}/start`, {}, ADMIN);
+  await walk(api, clock, r.dev, 0, 11.1, 280);
+  assert.equal((await distOf(api, r)).status, 'finished');
+  await walk(api, clock, r.dev, 0.2, 1, 30);
+  const p = await distOf(api, r);
+  assert.equal(p.status, 'finished');
+  assert.ok(p.distKm > 11);
+});

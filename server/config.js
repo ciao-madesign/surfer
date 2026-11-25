@@ -19,6 +19,8 @@ export const MAX_SPEED = 12;       // m/s: oltre, un salto di posizione è consi
 export const MAX_ANOM = 3;         // salti consecutivi scartati prima di fidarsi della nuova posizione
 export const OFF_COURSE_M = 300;   // m: oltre, il punto non fa avanzare la progressiva sul percorso
 export const MAX_PROG_ANOM = 5;    // avanzamenti irreali consecutivi prima di accettarli
+export const BACK_KM = 0.5;        // km: se la posizione sul percorso è più indietro di tanto rispetto alla progressiva…
+export const MAX_BACK_ANOM = 8;    // …per tanti invii consecutivi (≈2 min in corsa), la progressiva viene riallineata (mai dopo l'arrivo)
 export const COLORS = ['#e91e63', '#2bb7da', '#f4c20d', '#34a853', '#8e24aa', '#ff7043', '#00bfa5', '#5c6bc0', '#c0ca33', '#d81b60', '#26c6da', '#8d6e63'];
 export const STATUS_LABEL = { waiting: 'In attesa', tracking: 'Segnale attivo', paused: 'In pausa',
   no_gps: 'Senza segnale GPS', offline: 'Senza connessione', finished: 'Gara conclusa' };
