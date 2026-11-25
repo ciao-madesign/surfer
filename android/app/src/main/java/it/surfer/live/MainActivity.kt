@@ -169,13 +169,21 @@ class MainActivity : Activity() {
                 (if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.POST_NOTIFICATIONS) else emptyArray<String>()), 1)
             return
         }
+        if (!gpsOn()) { err.text = "Il GPS del telefono è spento. Attivalo e riprova."; startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)); return }
+        err.text = ""
         TrackingService.start(this); ui.postDelayed({ render() }, 500)
     }
 
     override fun onRequestPermissionsResult(rc: Int, perms: Array<out String>, res: IntArray) {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) toggleSharing()
-        else err.text = "Senza il permesso di posizione non posso condividere."
+        else {
+            err.text = "Senza il permesso di posizione non posso condividere. Abilitalo in Impostazioni → App → Surfer Live → Autorizzazioni."
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION))
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName")))
+        }
     }
+
+    private fun gpsOn() = getSystemService(android.location.LocationManager::class.java).isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
 
     private fun askBattery() {
         // Apre l'elenco delle app con restrizioni batteria: lì si sceglie «Senza restrizioni» per Surfer Live.
@@ -198,19 +206,22 @@ class MainActivity : Activity() {
         title.text = if (paired) pairing!!.name else "Collega il telefono"
         TrackingService.message?.let { err.text = it }
         err.visibility = vis(err.text.isNotEmpty())
+        val up = TrackingService.uploader(this)
+        val offline = sharing && up.lastError == "Connessione assente"
         status.text = when {
             !paired -> "Scansiona il QR dell'organizzatore oppure incolla il link."
             consent == null -> "Verifico il collegamento…"
             consent == false -> "Serve il tuo consenso per condividere la posizione."
             !sharing -> "Condivisione ferma: la tua posizione non viene inviata."
-            TrackingService.noGps -> "Segnale GPS assente"
+            !gpsOn() -> "Il GPS del telefono è spento: attivalo per continuare"
+            TrackingService.noGps -> "Segnale GPS assente: vai in un punto con cielo aperto"
+            offline -> "Condivisione attiva · senza rete: i punti sono salvati e partiranno al ritorno del segnale"
             else -> "Condivisione attiva"
         }
-        setDot(when { !paired || consent != true || !sharing -> R.color.faint; TrackingService.noGps -> R.color.warn; else -> R.color.teal })
-        val up = TrackingService.uploader(this)
+        setDot(when { !paired || consent != true || !sharing -> R.color.faint; TrackingService.noGps || offline || !gpsOn() -> R.color.warn; else -> R.color.teal })
         fun ago(t: Long) = if (t == 0L) "–" else ((System.currentTimeMillis() - t) / 1000).let { s -> if (s < 90) "$s s fa" else "${s / 60} min fa" }
         info.text = "Ultimo punto: ${ago(TrackingService.lastFix)}\nPrecisione: ${if (TrackingService.lastFix == 0L) "–" else "${TrackingService.lastAcc.toInt()} m"}\n" +
-            "In attesa di invio: ${up.pending}\nUltimo invio: ${ago(up.lastSuccess)}" + (up.lastError?.let { "\n$it" } ?: "")
+            "In attesa di invio: ${up.pending}\nUltimo invio: ${ago(up.lastSuccess)}" + (up.lastError?.takeIf { !offline }?.let { "\n$it" } ?: "")
     }
 
     private fun vis(b: Boolean) = if (b) View.VISIBLE else View.GONE
