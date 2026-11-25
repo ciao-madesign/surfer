@@ -69,6 +69,9 @@ Obiettivo: evitare due domini separati.
 - Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/surfer/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
 
 ## Decisioni prese
+- Distribuzione dell'app Android (25/11/2026): ad altri utenti, non solo uso personale. Strada: Play Store (test chiuso, poi produzione) e, in parallelo, APK scaricabile dal sito. Guida in `docs/android-distribuzione.md`. La chiave di firma resta fuori dal repository e va conservata in più copie. Link che aprono direttamente l'app: dopo aver fissato firma e dominio.
+- Ancora aperta: dominio definitivo (resta `surfer-eta.vercel.app` finché l'utente non decide; l'app è agganciata a questo indirizzo in `AndroidManifest.xml`).
+- Confermate: hosting Vercel (salvo alternativa gratuita con uso commerciale); limite 20 corridori per ora; smartwatch e tracker GPS dopo l'app; iOS quando ci sarà l'account sviluppatore Apple.
 - App nativa (25/11/2026): Kotlin nativo per Android, Swift per iOS, nessuna dipendenza esterna. Scartato Capacitor: il GPS a schermo spento dipenderebbe da un plugin gratuito meno affidabile o da uno a pagamento. Le app condividono API e formato dei dati; un guscio Capacitor resta possibile in futuro riusando il servizio GPS Kotlin.
 - Mappe: si tengono Esri World Imagery e OpenTopoMap con attribuzione (da rivalutare prima di aprire a molti utenti).
 - Dati dopo la gara: su Neon nome, tempi, statistiche e consenso restano 3 giorni, legati solo all'id del partecipante nella gara (mai a IP o dispositivo); l'IP compare solo come hash con sale giornaliero nel contatore anti-abuso (2 giorni) e nei log di Vercel.
