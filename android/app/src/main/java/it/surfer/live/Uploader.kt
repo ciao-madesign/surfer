@@ -20,7 +20,7 @@ class Uploader(ctx: Context) {
 
     init { try { JSONArray(file.readText()).let { a -> for (i in 0 until a.length()) queue.add(a.getJSONObject(i)) } } catch (_: Exception) {} }
 
-    @Synchronized val pending get() = queue.size
+    val pending: Int get() = synchronized(this) { queue.size }
 
     @Synchronized fun enqueue(t: Long, lat: Double, lon: Double, ele: Double?, acc: Float) {
         queue.add(JSONObject().put("t", t).put("lat", lat).put("lon", lon).put("acc", acc.toDouble()).apply { if (ele != null) put("ele", ele) })

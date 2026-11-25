@@ -2,15 +2,14 @@ package it.surfer.live
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.PowerManager
 import android.provider.Settings
 import android.text.InputType
 import android.view.Gravity
@@ -59,7 +58,7 @@ class MainActivity : Activity() {
         toggle = btn("Avvia condivisione") { toggleSharing() }.add()
         info = tv("", 14f).add()
         err = tv("", 14f).apply { setTextColor(Color.rgb(180, 30, 30)) }.add()
-        batteryBtn = btn("Consenti uso batteria senza limiti (consigliato)") { askBattery() }.add()
+        batteryBtn = btn("Impostazioni batteria (consigliato: senza restrizioni)") { askBattery() }.add()
         unpair = btn("Scollega questo telefono") { if (!TrackingService.running) { Pairing.save(this, null); pairing = null; consent = null; render() } }.add()
         forget = btn("Cancella i miei dati") { doForget() }.add()
         tv("Consigli: tieni attivo il GPS, disattiva il risparmio energetico. La notifica resta visibile finché condividi.", 13f).add()
@@ -112,7 +111,7 @@ class MainActivity : Activity() {
         if (TrackingService.running) { TrackingService.stop(this); render(); return }
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION) +
-                (if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.POST_NOTIFICATIONS) else emptyArray()), 1)
+                (if (Build.VERSION.SDK_INT >= 33) arrayOf(Manifest.permission.POST_NOTIFICATIONS) else emptyArray<String>()), 1)
             return
         }
         TrackingService.start(this); ui.postDelayed({ render() }, 500)
@@ -124,10 +123,9 @@ class MainActivity : Activity() {
     }
 
     private fun askBattery() {
-        // Senza questa esenzione alcuni telefoni (Xiaomi, Samsung, Huawei…) fermano il GPS dopo qualche minuto a schermo spento.
-        val pm = getSystemService(PowerManager::class.java)
-        if (pm.isIgnoringBatteryOptimizations(packageName)) { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); return }
-        startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+        // Apre l'elenco delle app con restrizioni batteria: lì si sceglie «Senza restrizioni» per Surfer Live.
+        // Sui telefoni con gestione aggressiva (Xiaomi, Samsung, Huawei) evita che il GPS si fermi a schermo spento.
+        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
 
     private fun render() {
