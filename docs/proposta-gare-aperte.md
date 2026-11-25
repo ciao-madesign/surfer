@@ -31,7 +31,16 @@ Prevalgono sulle indicazioni precedenti di questo documento.
 4. **Hosting: si resta su Vercel**, a meno che esista un'alternativa gratuita che consenta l'uso commerciale. Cloudflare non è considerata adatta (vedi «Migrazione»).
 5. **Limite di 20 corridori per gara mantenuto per ora**, per non sovraccaricare Redis (Upstash). Verrà tolto passando a un servizio più grande (Redis o altro). A quel punto si valuterà la monetizzazione per coprire i costi.
 
-**Da decidere**: la bozza Android esistente (branch `claude/modest-ramanujan-apnome`) è in Kotlin nativo. Va confermata come base o rifatta con Capacitor, come suggerito più sotto. Il Kotlin nativo è adatto a un'app che fa solo il tracking; Capacitor riusa più pagine del sito.
+6. **L'app è un unico accesso a tutto.** All'apertura una schermata chiede: «segui una gara», «devi correre», «devi organizzare». Si ricorda l'ultima scelta, con un tasto per cambiare ruolo; aprendo un link di gara si entra direttamente nel ruolo giusto. Nessun account: il ruolo si riconosce dal link o dal codice. Chi vuole solo guardare può usare il link, senza installare nulla.
+7. **Notifiche per chi ha l'app** (spettatori e corridori). Prima gli eventi essenziali (partenza, checkpoint, arrivo, segnale perso) per i corridori che si seguono. Le notifiche tra corridori e di gruppo vengono dopo, con consenso esplicito e regole anti-spam. Prima va misurato il carico su Redis, perché il server deve accorgersi subito dei passaggi.
+8. **Si prosegue con Kotlin nativo** (bozza nel branch `claude/modest-ramanujan-apnome`). Capacitor resta un'alternativa, non scelta. Sito e app devono dare la stessa esperienza:
+   - API e formato dei dati comuni, e un solo elenco di funzioni a cui sito e app si riferiscono;
+   - stessi colori, font e testi, presi dal design system;
+   - ogni funzione nuova esce su entrambi i canali, oppure è segnata «solo web» o «solo app».
+
+**Ordine di lavoro dell'app**: 1) corridore (GPS in background, coda offline: è il rischio tecnico); 2) spettatore con notifiche; 3) organizzatore (per ora resta sul sito).
+
+**Da chiarire**: lo spettatore segue più gare o più corridori insieme, o uno alla volta?
 
 ## Primo passo: iscrizione autonoma (piano)
 
@@ -262,7 +271,7 @@ Consiglio: la prima strada.
 ## Domande aperte
 - Pubblicità con circuito esterno o solo sponsor diretti?
 - Esiste un hosting gratuito che consenta l'uso commerciale? Altrimenti si resta su Vercel.
-- Bozza Android: Kotlin nativo o Capacitor?
+- Spettatore nell'app: più gare o più corridori insieme?
 - Email obbligatoria, facoltativa o assente?
 - Gara pubblica (mappa con tutti) da subito o solo più avanti?
 - Chi è titolare dei dati: va deciso con un professionista prima del lancio.
