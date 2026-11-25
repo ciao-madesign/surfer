@@ -16,12 +16,16 @@
         android:usesCleartextTraffic="false"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask">
+        <!-- Ingresso: scelta del ruolo (o apertura diretta dell'ultimo ruolo scelto) -->
+        <activity android:name=".HomeActivity" android:exported="true" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Il QR di /gestisci è un link …/track#codice: lo apre l'app invece del browser. -->
+        </activity>
+
+        <!-- Un link di gara apre direttamente il ruolo giusto. Per ora solo /track (runner): /live (spettatore) e /gestisci (organizzatore) si aggiungono quando le loro schermate avranno un contenuto -->
+        <activity android:name=".RunnerActivity" android:exported="true" android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -29,6 +33,8 @@
                 <data android:scheme="https" android:host="surfer-eta.vercel.app" android:path="/track" />
             </intent-filter>
         </activity>
+        <activity android:name=".ViewerActivity" android:exported="false" />
+        <activity android:name=".OrganizerActivity" android:exported="false" />
 
         <!-- Scarica in anticipo il modulo dello scanner, così funziona subito anche senza rete. -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />

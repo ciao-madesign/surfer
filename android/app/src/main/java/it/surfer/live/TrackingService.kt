@@ -46,7 +46,7 @@ class TrackingService : Service(), LocationListener {
         if (pairing == null) { stopSelf(); return START_NOT_STICKY }
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel("track", "Condivisione posizione", NotificationManager.IMPORTANCE_LOW))
-        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        val open = PendingIntent.getActivity(this, 0, Intent(this, RunnerActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val n = Notification.Builder(this, "track").setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentTitle("Surfer Live: posizione condivisa").setContentText("Tocca per aprire e interrompere")
             .setContentIntent(open).setOngoing(true).build()
