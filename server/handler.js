@@ -39,7 +39,9 @@ const privateCache = (s) => ({ 'Cache-Control': `private, max-age=${s}` });
       const ok = (json, headers = NOCACHE, status = 200) => ({ status, headers, json });
       const route = parts.join('/');
       // la CDN usa l'URL come chiave di cache: parametri in più servirebbero solo a saltarla
-      if (method === 'GET' && ['live', 'course', 'stats', 'report'].includes(route) && Object.keys(query).some((x) => x !== 't')) throw bad('Richiesta non valida');
+      // Parametri in più (anche quelli che l'hosting aggiunge nelle riscritture, come ?p=) si ignorano: contano solo i dati letti da `t`.
+      // L'abuso della cache con parametri casuali è comunque frenato dal limite di richieste per IP qui sotto.
+      if (method === 'GET' && ['live', 'course', 'stats', 'report'].includes(route)) query = { t: query.t };
       if (route !== 'health' && route !== 'cron/archive' && !route.startsWith('demo/')) {
         ipk = `rl:ip:${ipId(h)}:${Math.floor(now() / 60000)}`;
         const n = await repo.hit(ipk, 90);

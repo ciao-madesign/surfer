@@ -665,10 +665,10 @@ test('limiti: tentativi con credenziali sbagliate e troppe richieste dalla stess
   assert.equal((await api3('GET', '/api/live', null, {}, { t: r3.view })).status, 200, 'il limite si azzera dopo un minuto');
 });
 
-test('cache: parametri in più e intestazione del token non sono accettati', async () => {
+test('cache: parametri in più sono ignorati e l\'intestazione del token non è accettata', async () => {
   const { api } = setup();
   const r = await race(api);
-  assert.equal((await api('GET', '/api/live', null, {}, { t: r.view, x: '1' })).status, 400);
+  assert.equal((await api('GET', '/api/live', null, {}, { t: r.view, x: '1' })).status, 200, 'i parametri aggiunti dall\'hosting non devono rompere il link');
   assert.equal((await api('GET', '/api/live', null, { 'x-view-token': r.view })).status, 401);
 });
 
