@@ -29,5 +29,5 @@
     <string name="event_expired">Link scaduto o revocato</string>
     <string name="event_ended">Gara conclusa</string>
     <!-- Da confermare: stesso testo già usato nella schermata Runner -->
-    <string name="scanner_unavailable">Scanner non disponibile su questo telefono: incolla il link nel campo qui sotto.</string>
+    <string name="scanner_unavailable">Scanner non disponibile su questo telefono: incolla il link nel campo.</string>
 </resources>
