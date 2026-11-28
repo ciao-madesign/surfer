@@ -1,9 +1,20 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
-    <group android:translateX="28" android:translateY="35.2" android:scaleX="0.0557" android:scaleY="0.0557">
-        <path android:pathData="M208.768,321.919L330.269,538.919L463.768,274.419L586.269,538.919L878.269,31.4187"
-            android:strokeColor="#4fd1c5" android:strokeWidth="126" />
-        <path android:pathData="M36.3834,340.21L329.383,170.21"
-            android:strokeColor="#4fd1c5" android:strokeWidth="145" />
+    android:width="108dp" android:height="108dp" android:viewportWidth="192" android:viewportHeight="192">
+    <group android:translateX="38" android:translateY="38" android:scaleX="0.6" android:scaleY="0.6">
+        <group android:translateX="36.1" android:translateY="147.8" android:rotation="28" android:scaleX="1.45" android:scaleY="1.45">
+            <path android:fillColor="#4fd1c5" android:pathData="M-8,-5 a8,11 0 1,0 16,0 a8,11 0 1,0 -16,0 M-5.5,11 a5.5,6 0 1,0 11.0,0 a5.5,6 0 1,0 -11.0,0" />
+        </group>
+        <group android:translateX="77.2" android:translateY="130.4" android:rotation="36" android:scaleX="1.45" android:scaleY="1.45">
+            <path android:fillColor="#ffffff" android:pathData="M-8,-5 a8,11 0 1,0 16,0 a8,11 0 1,0 -16,0 M-5.5,11 a5.5,6 0 1,0 11.0,0 a5.5,6 0 1,0 -11.0,0" />
+        </group>
+        <group android:translateX="89.6" android:translateY="91.6" android:rotation="45" android:scaleX="1.45" android:scaleY="1.45">
+            <path android:fillColor="#ffffff" android:pathData="M-8,-5 a8,11 0 1,0 16,0 a8,11 0 1,0 -16,0 M-5.5,11 a5.5,6 0 1,0 11.0,0 a5.5,6 0 1,0 -11.0,0" />
+        </group>
+        <group android:translateX="127.4" android:translateY="78.2" android:rotation="54" android:scaleX="1.45" android:scaleY="1.45">
+            <path android:fillColor="#ffffff" android:pathData="M-8,-5 a8,11 0 1,0 16,0 a8,11 0 1,0 -16,0 M-5.5,11 a5.5,6 0 1,0 11.0,0 a5.5,6 0 1,0 -11.0,0" />
+        </group>
+        <group android:translateX="143.8" android:translateY="36.1" android:rotation="62" android:scaleX="1.45" android:scaleY="1.45">
+            <path android:fillColor="#4fd1c5" android:pathData="M-8,-5 a8,11 0 1,0 16,0 a8,11 0 1,0 -16,0 M-5.5,11 a5.5,6 0 1,0 11.0,0 a5.5,6 0 1,0 -11.0,0" />
+        </group>
     </group>
 </vector>

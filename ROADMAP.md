@@ -66,7 +66,7 @@ Orme è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasci
 Primo passo realizzato: iscrizione autonoma con link (`/iscriviti`), fino a 20 corridori, consenso nell'iscrizione. Da provare su telefoni veri e da far rivedere a un legale prima di aprirla al pubblico; misurare il consumo Redis con una gara vera. Valutazione e piano in `docs/proposta-gare-aperte.md`. Rimandati: pubblicità, Garmin, app nostra, Cloudflare, gruppi, mappa pubblica.
 
 ## Altre attività
-- Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-surfer.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
+- Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-orme.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
 - Landing: controllare le foto su telefono e computer; decidere se usare la foto dell'escursione; demo con percorso e checkpoint di esempio (citare l'organizzatore del tracciato o chiedere il permesso).
 - Checkpoint scelti direttamente sulla mappa.
 - Android a schermo spento: app nativa in `android/` (provata su emulatore: collegamento, consenso, invio e `/live` ok; manca la prova su telefono reale). Da fare: prova sul campo, link verificati, distribuzione (Play Store o APK).

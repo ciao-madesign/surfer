@@ -1,6 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
-<style>.s{stroke:#0a0f14}@media (prefers-color-scheme:dark){.s{stroke:#fff}}</style>
-<path class="s" d="M140 48C100 24 44 44 56 84C66 116 134 106 142 142C150 176 88 176 48 150" fill="none" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="140" cy="48" r="17" fill="#14b8a6"/>
-<circle cx="48" cy="150" r="17" fill="#14b8a6"/>
+<style>.f{color:#0a0f14}@media (prefers-color-scheme:dark){.f{color:#fff}}</style>
+<g class="f">
+<g transform="translate(36.1 147.8) rotate(28) scale(1.45)" fill="#14b8a6"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
+<g transform="translate(77.2 130.4) rotate(36) scale(1.45)" fill="currentColor"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
+<g transform="translate(89.6 91.6) rotate(45) scale(1.45)" fill="currentColor"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
+<g transform="translate(127.4 78.2) rotate(54) scale(1.45)" fill="currentColor"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
+<g transform="translate(143.8 36.1) rotate(62) scale(1.45)" fill="#14b8a6"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
+</g>
 </svg>
