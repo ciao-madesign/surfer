@@ -60,7 +60,7 @@ Rimandato (con motivo):
 - Cambiando dominio: aggiornare canonical, `og:url`, `og:image`, sitemap, robots e dati strutturati.
 
 ## Prima di un eventuale uso commerciale
-Surfer è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe e aggiornare condizioni e privacy.
+Orme è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe e aggiornare condizioni e privacy.
 
 ## Gare aperte (valutate)
 Primo passo realizzato: iscrizione autonoma con link (`/iscriviti`), fino a 20 corridori, consenso nell'iscrizione. Da provare su telefoni veri e da far rivedere a un legale prima di aprirla al pubblico; misurare il consumo Redis con una gara vera. Valutazione e piano in `docs/proposta-gare-aperte.md`. Rimandati: pubblicità, Garmin, app nostra, Cloudflare, gruppi, mappa pubblica.
@@ -74,7 +74,7 @@ Primo passo realizzato: iscrizione autonoma con link (`/iscriviti`), fino a 20 c
 
 ## 6. Un solo dominio con WizTrail
 Obiettivo: evitare due domini separati.
-- Strada consigliata: stesso dominio, due progetti Vercel. WizTrail inoltra a Surfer un percorso (regola di rinvio); i due progetti si pubblicano separatamente.
+- Strada consigliata: stesso dominio, due progetti Vercel. WizTrail inoltra a Orme un percorso (regola di rinvio); i due progetti si pubblicano separatamente.
 - Alternativa: un solo progetto Vercel. Più ordinato, ma sul piano gratuito c'è un limite di funzioni serverless e vanno fusi archivi e attività programmate.
 - Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/surfer/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
 

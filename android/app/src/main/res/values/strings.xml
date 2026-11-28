@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Surfer Live</string>
+    <string name="app_name">Orme Live</string>
 
     <!-- Schermata iniziale: testi approvati dal responsabile (25/11/2026) -->
     <string name="home_title">Come vuoi usare Orme?</string>
@@ -14,7 +14,7 @@
     <string name="train_workout">Allenamento</string>
     <string name="train_workout_desc">Mostra percorso, ritmo, distanza.</string>
     <string name="train_hike">Escursione</string>
-    <string name="train_hike_desc">Mostra sempre dove sei, quota e posizione anche dove non c\'è campo.</string>
+    <string name="train_hike_desc">Mostra dove sei, quota e posizione.</string>
     <string name="train_warning">Questo non è un servizio di soccorso. In caso di emergenza chiama il 112.</string>
 
     <!-- Spettatore: testi approvati dal responsabile (25/11/2026) -->

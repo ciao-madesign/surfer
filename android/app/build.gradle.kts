@@ -11,10 +11,10 @@ val keystoreProps = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 android {
-    namespace = "it.surfer.live"
+    namespace = "it.orme.live"
     compileSdk = 34
     defaultConfig {
-        applicationId = "it.surfer.live"
+        applicationId = "it.orme.live"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

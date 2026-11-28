@@ -1,4 +1,4 @@
-package it.surfer.live
+package it.orme.live
 
 import android.Manifest
 import android.app.Activity
@@ -51,7 +51,7 @@ class RunnerActivity : BaseActivity() {
         super.onCreate(b)
         setupScreen()
         Role.set(this, Role.RUNNER)
-        title = tv("Surfer Live", 30f, R.color.ink, 600).add(18)
+        title = tv("Orme Live", 30f, R.color.ink, 600).add(18)
         dot = box(col(R.color.faint), 0, 50).apply { setSize(dp(10), dp(10)); shape = GradientDrawable.OVAL }
         status = tv("", 16f, R.color.ink).apply { setCompoundDrawablesRelativeWithIntrinsicBounds(dot, null, null, null); compoundDrawablePadding = dp(10); gravity = Gravity.CENTER_VERTICAL }.add(6)
         scanBtn = btn("Scansiona il QR code", 0) { scan() }.add(20)
@@ -142,7 +142,7 @@ class RunnerActivity : BaseActivity() {
     override fun onRequestPermissionsResult(rc: Int, perms: Array<out String>, res: IntArray) {
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) toggleSharing()
         else {
-            err.text = "Senza il permesso di posizione non posso condividere. Abilitalo in Impostazioni → App → Surfer Live → Autorizzazioni."
+            err.text = "Senza il permesso di posizione non posso condividere. Abilitalo in Impostazioni → App → Orme Live → Autorizzazioni."
             if (!shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION))
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName")))
         }
@@ -151,7 +151,7 @@ class RunnerActivity : BaseActivity() {
     private fun gpsOn() = getSystemService(android.location.LocationManager::class.java).isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)
 
     private fun askBattery() {
-        // Apre l'elenco delle app con restrizioni batteria: lì si sceglie «Senza restrizioni» per Surfer Live.
+        // Apre l'elenco delle app con restrizioni batteria: lì si sceglie «Senza restrizioni» per Orme Live.
         // Sui telefoni con gestione aggressiva (Xiaomi, Samsung, Huawei) evita che il GPS si fermi a schermo spento.
         startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }

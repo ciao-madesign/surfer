@@ -1,4 +1,4 @@
-package it.surfer.live
+package it.orme.live
 
 import android.app.*
 import android.content.Context
@@ -48,7 +48,7 @@ class TrackingService : Service(), LocationListener {
         nm.createNotificationChannel(NotificationChannel("track", "Condivisione posizione", NotificationManager.IMPORTANCE_LOW))
         val open = PendingIntent.getActivity(this, 0, Intent(this, RunnerActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val n = Notification.Builder(this, "track").setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentTitle("Surfer Live: posizione condivisa").setContentText("Tocca per aprire e interrompere")
+            .setContentTitle("Orme Live: posizione condivisa").setContentText("Tocca per aprire e interrompere")
             .setContentIntent(open).setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION) else startForeground(1, n)
 

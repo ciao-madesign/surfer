@@ -16,7 +16,7 @@ Stato: idea per sviluppo futuro, con valutazione di novembre 2026 (sotto). Nessu
 2. **«Gratis» non regge su larga scala**: ogni invio costa circa 10–15 comandi Redis; una gara da 200 corridori supera i 500.000 comandi mensili del piano gratuito di Upstash. Costo basso (pochi euro), ma non più zero.
 3. **Pubblicità**: contraddice «senza cookie» e rende il progetto commerciale (fuori da Vercel Hobby). Sconsigliata; gli sponsor diretti senza tracciamento sono compatibili.
 4. **Limiti attuali non adatti a un evento**: 120 richieste al minuto per rete (sul Wi-Fi della griglia di partenza bloccherebbe i corridori), tetto di 5 corridori nel codice, risposta `live` in cache per link (con un link per gruppo serve la «fotografia unica»).
-5. **Garmin MapShare**: non verificato, i termini d'uso per terzi vanno controllati; invia una posizione ogni 2–10 minuti mentre Surfer dà «senza connessione» dopo 3: servirebbe una soglia per sorgente.
+5. **Garmin MapShare**: non verificato, i termini d'uso per terzi vanno controllati; invia una posizione ogni 2–10 minuti mentre Orme dà «senza connessione» dopo 3: servirebbe una soglia per sorgente.
 6. **App nostra**: impegno e manutenzione sottostimati; l'approvazione degli store per la posizione in background è difficile.
 
 **Da rimandare**: pubblicità, Garmin, app nostra, Cloudflare, mappa pubblica, gruppi.
@@ -179,7 +179,7 @@ Invece di affidarsi a Overland o al browser, il tracking lo fa un'app nostra per
 **Permessi: non serve «sempre»**
 Se il corridore preme «Avvia» con l'app aperta, basta il permesso «mentre usi l'app»:
 - iPhone: il tracking continua a schermo spento, con l'indicatore blu della posizione in alto.
-- Android: l'app mostra una notifica fissa («Surfer sta registrando la gara») e continua a funzionare.
+- Android: l'app mostra una notifica fissa («Orme sta registrando la gara») e continua a funzionare.
 
 Meno problemi con l'approvazione degli store e più fiducia da parte del corridore.
 
@@ -207,8 +207,8 @@ Consiglio: la prima strada.
 - Privacy: dati uguali a oggi, ma la responsabilità diventa interamente nostra.
 
 **Quando farla**
-1. Prima: Traccar Client (iPhone e Android, una sola guida) e OwnTracks (configurazione con un link) come alternative a Overland, subito disponibili e quasi a costo zero. Per Android anche OsmAnd e Locus Map, spesso già installate (invio verso Surfer da verificare).
-2. Poi: l'app Surfer, quando le gare aperte hanno un utilizzo reale. Diventa l'unica app consigliata; le altre restano per chi le usa già.
+1. Prima: Traccar Client (iPhone e Android, una sola guida) e OwnTracks (configurazione con un link) come alternative a Overland, subito disponibili e quasi a costo zero. Per Android anche OsmAnd e Locus Map, spesso già installate (invio verso Orme da verificare).
+2. Poi: l'app Orme, quando le gare aperte hanno un utilizzo reale. Diventa l'unica app consigliata; le altre restano per chi le usa già.
 
 ## Percorso consigliato (a fasi)
 

@@ -1,4 +1,4 @@
-# Distribuire l'app Android (Surfer Live)
+# Distribuire l'app Android (Orme Live)
 
 Obiettivo: far installare l'app ad altri. Due strade, si possono fare entrambe.
 
@@ -12,7 +12,7 @@ Ogni aggiornamento deve essere firmato con la **stessa chiave**: se la perdi, no
    ```
    storeFile=C:/percorso/surfer.jks
    storePassword=…
-   keyAlias=surfer
+   keyAlias=orme
    keyPassword=…
    ```
 Se usi il Play Store con «Play App Signing» (consigliato) Google custodisce la chiave definitiva e la tua è solo di caricamento, quindi perderla è recuperabile. Scegli comunque di conservarla bene.

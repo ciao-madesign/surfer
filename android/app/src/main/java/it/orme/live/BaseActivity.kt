@@ -1,4 +1,4 @@
-package it.surfer.live
+package it.orme.live
 
 import android.app.Activity
 import android.content.Intent
@@ -44,7 +44,7 @@ open class BaseActivity : Activity() {
         setOnClickListener { f() }
     }
 
-    /** Crea la pagina scorrevole con l'intestazione (logo + SURFER · LIVE). */
+    /** Crea la pagina scorrevole con l'intestazione (logo + ORME · LIVE). */
     protected fun setupScreen() {
         root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20), dp(24), dp(20), dp(28)) }
         setContentView(ScrollView(this).apply { addView(root); isFillViewport = true; setBackgroundColor(col(R.color.bg)) })
@@ -52,7 +52,7 @@ open class BaseActivity : Activity() {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             addView(ImageView(this@BaseActivity).apply { setImageResource(R.drawable.logo_mark) })
             addView(TextView(this@BaseActivity).apply {
-                text = "SURFER · LIVE"; textSize = 12f; typeface = mono; letterSpacing = 0.18f; setTextColor(col(R.color.teal)); setPadding(dp(12), 0, 0, 0)
+                text = "ORME · LIVE"; textSize = 12f; typeface = mono; letterSpacing = 0.18f; setTextColor(col(R.color.teal)); setPadding(dp(12), 0, 0, 0)
             })
         }.add(0)
     }

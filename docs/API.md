@@ -1,4 +1,4 @@
-# API di Surfer · Live
+# API di Orme · Live
 
 Tutte le rotte iniziano con `/api` (equivale a `/api/v1`, che si può usare per fissare la versione). Le risposte sono JSON. Gli errori hanno la forma `{ "error": "testo" }`.
 

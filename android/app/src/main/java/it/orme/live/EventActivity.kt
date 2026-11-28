@@ -1,4 +1,4 @@
-package it.surfer.live
+package it.orme.live
 
 import android.app.Activity
 import android.content.Intent

@@ -226,7 +226,7 @@ if (DEMO) {
   try { state.course = await api('course'); } catch (e) {
     return fatal(e.status === 410 ? 'Dati scaduti' : 'Link non valido', e.status === 410 ? 'Questa gara è conclusa e i dati sono stati cancellati.' : 'Il link è errato, revocato o scaduto.');
   }
-  document.title = `${state.course.name} · Surfer · Live`;
+  document.title = `${state.course.name} · Orme · Live`;
   initMap(); drawProfile(); weather();
   await pollLive(); pollStats();
   every(pollLive, POLL_MS); every(pollStats, STATS_MS); setInterval(weather, 15 * 60000);

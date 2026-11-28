@@ -1,4 +1,4 @@
-# Surfer · Live
+# Orme · Live
 
 **Segui una gara in diretta, da casa.** Un link privato mostra su una mappa dove si trova chi corre, quando passa ai checkpoint e quando arriverà. Gratuito, senza account e senza app per chi guarda.
 
@@ -60,7 +60,7 @@ npm run dev       # ADMIN_KEY=dev, archivio in memoria, http://localhost:3000
 4. Cambiando dominio, aggiorna l'indirizzo del sito in `canonical`, `og:url`, `og:image`, `public/sitemap.xml`, `public/robots.txt` e nei dati strutturati di `public/index.html`.
 
 ## Mappe e licenze (da rivalutare prima di aprire a molti utenti)
-Sorgenti in `public/js/config.js`: Esri World Imagery e OpenTopoMap con attribuzione, rilievo AWS Terrain Tiles, meteo Open-Meteo (CC BY 4.0, uso non commerciale). Vercel Hobby: solo uso non commerciale. Surfer è oggi gratuito e senza scopo di lucro; prima di un uso commerciale vedi `ROADMAP.md`.
+Sorgenti in `public/js/config.js`: Esri World Imagery e OpenTopoMap con attribuzione, rilievo AWS Terrain Tiles, meteo Open-Meteo (CC BY 4.0, uso non commerciale). Vercel Hobby: solo uso non commerciale. Orme è oggi gratuito e senza scopo di lucro; prima di un uso commerciale vedi `ROADMAP.md`.
 
 ## Logo (provvisorio)
 `public/logo-surfer.svg`: una «S» morbida che simula una traccia GPX, senza sfondo, con un pallino verde acqua in apertura e uno in chiusura del percorso. Nel footer resta il simbolo bianco di WizTrail (`public/logo-mark.svg`).
