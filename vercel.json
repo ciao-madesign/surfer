@@ -79,7 +79,7 @@
       ]
     },
     {
-      "source": "/((?!privacy|demo|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|logo-orme\\.svg|favicon\\.svg|apple-touch-icon\\.png|og-image\\.png|sitemap\\.xml|robots\\.txt|$).*)",
+      "source": "/((?!privacy|demo|condizioni|site\\.css|img|css|fonts|logo-mark\\.svg|logo-orme\\.png|favicon\\.png|apple-touch-icon\\.png|og-image\\.png|sitemap\\.xml|robots\\.txt|$).*)",
       "headers": [
         {
           "key": "X-Robots-Tag",

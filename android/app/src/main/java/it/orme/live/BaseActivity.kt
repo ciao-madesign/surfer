@@ -50,7 +50,7 @@ open class BaseActivity : Activity() {
         setContentView(ScrollView(this).apply { addView(root); isFillViewport = true; setBackgroundColor(col(R.color.bg)) })
         LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-            addView(ImageView(this@BaseActivity).apply { setImageResource(R.drawable.logo_mark) })
+            addView(ImageView(this@BaseActivity).apply { setImageResource(R.drawable.logo_mark); layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)) })
             addView(TextView(this@BaseActivity).apply {
                 text = "ORME · LIVE"; textSize = 12f; typeface = mono; letterSpacing = 0.18f; setTextColor(col(R.color.teal)); setPadding(dp(12), 0, 0, 0)
             })
