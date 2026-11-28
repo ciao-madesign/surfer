@@ -1,10 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
 <style>.f{color:#0a0f14}@media (prefers-color-scheme:dark){.f{color:#fff}}</style>
 <g class="f">
-<g transform="translate(36.1 147.8) rotate(28) scale(1.45)" fill="#14b8a6"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
-<g transform="translate(77.2 130.4) rotate(36) scale(1.45)" fill="currentColor"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
-<g transform="translate(89.6 91.6) rotate(45) scale(1.45)" fill="currentColor"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
-<g transform="translate(127.4 78.2) rotate(54) scale(1.45)" fill="currentColor"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
-<g transform="translate(143.8 36.1) rotate(62) scale(1.45)" fill="#14b8a6"><ellipse cx="0" cy="-5" rx="8" ry="11"/><ellipse cx="0" cy="11" rx="5.5" ry="6"/></g>
+<g transform="translate(43.3 133.2) rotate(38) scale(1.25)" fill="#14b8a6"><path d="M0,1 C-9,1 -17,10 -15,18 C-13,25 -6,22 0,22 C6,22 13,25 15,18 C17,10 9,1 0,1 Z"/><ellipse cx="-15" cy="-3" rx="5.5" ry="8.5" transform="rotate(-22 -15 -3)"/><ellipse cx="-5.5" cy="-14" rx="6" ry="9.5" transform="rotate(-6 -5.5 -14)"/><ellipse cx="5.5" cy="-14" rx="6" ry="9.5" transform="rotate(6 5.5 -14)"/><ellipse cx="15" cy="-3" rx="5.5" ry="8.5" transform="rotate(22 15 -3)"/></g>
+<g transform="translate(104.7 102.8) rotate(38) scale(1.25)" fill="currentColor"><path d="M0,1 C-9,1 -17,10 -15,18 C-13,25 -6,22 0,22 C6,22 13,25 15,18 C17,10 9,1 0,1 Z"/><ellipse cx="-15" cy="-3" rx="5.5" ry="8.5" transform="rotate(-22 -15 -3)"/><ellipse cx="-5.5" cy="-14" rx="6" ry="9.5" transform="rotate(-6 -5.5 -14)"/><ellipse cx="5.5" cy="-14" rx="6" ry="9.5" transform="rotate(6 5.5 -14)"/><ellipse cx="15" cy="-3" rx="5.5" ry="8.5" transform="rotate(22 15 -3)"/></g>
+<g transform="translate(131.3 45.2) rotate(38) scale(1.25)" fill="#14b8a6"><path d="M0,1 C-9,1 -17,10 -15,18 C-13,25 -6,22 0,22 C6,22 13,25 15,18 C17,10 9,1 0,1 Z"/><ellipse cx="-15" cy="-3" rx="5.5" ry="8.5" transform="rotate(-22 -15 -3)"/><ellipse cx="-5.5" cy="-14" rx="6" ry="9.5" transform="rotate(-6 -5.5 -14)"/><ellipse cx="5.5" cy="-14" rx="6" ry="9.5" transform="rotate(6 5.5 -14)"/><ellipse cx="15" cy="-3" rx="5.5" ry="8.5" transform="rotate(22 15 -3)"/></g>
 </g>
 </svg>
