@@ -50,13 +50,13 @@ Rimandato (con motivo):
 - Cambiando dominio: aggiornare canonical, `og:url`, `og:image`, sitemap, robots e dati strutturati.
 
 ## Prima di un eventuale uso commerciale
-Surfer è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe e aggiornare condizioni e privacy.
+Orme è oggi gratuito e senza scopo di lucro. Prima di un uso commerciale: lasciare Vercel Hobby (solo uso non commerciale), passare a un piano Open-Meteo commerciale o ad altra fonte meteo, rifare la verifica delle licenze delle mappe e aggiornare condizioni e privacy.
 
 ## Gare aperte (valutate)
 Primo passo realizzato: iscrizione autonoma con link (`/iscriviti`), fino a 20 corridori, consenso nell'iscrizione. Da provare su telefoni veri e da far rivedere a un legale prima di aprirla al pubblico; misurare il consumo Redis con una gara vera. Valutazione e piano in `docs/proposta-gare-aperte.md`. Rimandati: pubblicità, Garmin, app nostra, Cloudflare, gruppi, mappa pubblica.
 
 ## Altre attività
-- Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-surfer.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
+- Logo: il simbolo attuale è provvisorio. Per sostituirlo basta cambiare `public/logo-orme.svg`, `public/favicon.svg`, `public/apple-touch-icon.png` (180 px) e `public/og-image.png` (1200×630).
 - Landing: controllare le foto su telefono e computer; decidere se usare la foto dell'escursione; demo con percorso e checkpoint di esempio (citare l'organizzatore del tracciato o chiedere il permesso).
 - Checkpoint scelti direttamente sulla mappa.
 - Allenamento ed Escursione (un solo corridore, dati cancellati a fine attività o dopo 12 ore, prolungabili) e cambio di nome: piano e impatti in `docs/proposta-attivita.md`.
@@ -66,9 +66,9 @@ Primo passo realizzato: iscrizione autonoma con link (`/iscriviti`), fino a 20 c
 
 ## 6. Un solo dominio con WizTrail
 Obiettivo: evitare due domini separati.
-- Strada consigliata: stesso dominio, due progetti Vercel. WizTrail inoltra a Surfer un percorso (regola di rinvio); i due progetti si pubblicano separatamente.
+- Strada consigliata: stesso dominio, due progetti Vercel. WizTrail inoltra a Orme un percorso (regola di rinvio); i due progetti si pubblicano separatamente.
 - Alternativa: un solo progetto Vercel. Più ordinato, ma sul piano gratuito c'è un limite di funzioni serverless e vanno fusi archivi e attività programmate.
-- Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/surfer/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
+- Da decidere prima del lancio (i link già condivisi non devono rompersi): percorso (`/orme/…`) oppure sottodominio, e dominio proprio al posto di `wiz-trail.vercel.app`.
 
 ## Decisioni prese
 - Distribuzione dell'app Android (25/11/2026): ad altri utenti, non solo uso personale. Strada: Play Store (test chiuso, poi produzione) e, in parallelo, APK scaricabile dal sito. Guida in `docs/android-distribuzione.md`. La chiave di firma resta fuori dal repository e va conservata in più copie. Link che aprono direttamente l'app: dopo aver fissato firma e dominio.

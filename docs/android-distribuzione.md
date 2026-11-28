@@ -1,4 +1,4 @@
-# Distribuire l'app Android (Surfer Live)
+# Distribuire l'app Android (Orme Live)
 
 Obiettivo: far installare l'app ad altri. Due strade, si possono fare entrambe.
 
@@ -6,13 +6,13 @@ Obiettivo: far installare l'app ad altri. Due strade, si possono fare entrambe.
 Ogni aggiornamento deve essere firmato con la **stessa chiave**: se la perdi, non puoi più aggiornare l'app esistente.
 
 1. Android Studio → *Build → Generate Signed App Bundle / APK* → *Create new…*
-2. Scegli un percorso **fuori dal repository** (ad esempio `Documenti/surfer-chiavi/surfer.jks`), una password robusta, alias `surfer`, validità 25+ anni.
+2. Scegli un percorso **fuori dal repository** (ad esempio `Documenti/orme-chiavi/orme.jks`), una password robusta, alias `orme`, validità 25+ anni.
 3. **Fai almeno due copie** (disco esterno + un archivio cifrato/gestore password) e annota le password.
 4. Per compilare da riga di comando crea `android/keystore.properties` (è ignorato da git):
    ```
-   storeFile=C:/percorso/surfer.jks
+   storeFile=C:/percorso/orme.jks
    storePassword=…
-   keyAlias=surfer
+   keyAlias=orme
    keyPassword=…
    ```
 Se usi il Play Store con «Play App Signing» (consigliato) Google custodisce la chiave definitiva e la tua è solo di caricamento, quindi perderla è recuperabile. Scegli comunque di conservarla bene.
@@ -23,7 +23,7 @@ Se usi il Play Store con «Play App Signing» (consigliato) Google custodisce la
 - Prima di ogni nuova versione aumenta `versionCode` (numero intero, sempre crescente) e `versionName` in `android/app/build.gradle.kts`.
 
 ## 2. APK dal sito (la più rapida)
-1. Metti l'APK in un posto raggiungibile (ad esempio `public/app/surfer-live.apk` oppure una release di GitHub) e pubblica un link nella pagina di gestione.
+1. Metti l'APK in un posto raggiungibile (ad esempio `public/app/orme-live.apk` oppure una release di GitHub) e pubblica un link nella pagina di gestione.
 2. Chi lo scarica deve consentire «Installa app sconosciute» per il browser. Android e Play Protect mostrano avvisi: è normale per le app fuori dallo store.
 3. Gli aggiornamenti non sono automatici: gli utenti scaricano l'APK nuovo.
 4. Mostra l'impronta SHA-256 dell'APK accanto al link, così chi vuole può verificarlo.
