@@ -7,6 +7,7 @@ object Role {
     const val VIEWER = "viewer"
     const val RUNNER = "runner"
     const val ORGANIZER = "organizer"
+    const val TRAIN = "train"
 
     private fun prefs(c: Context) = c.getSharedPreferences("app", Context.MODE_PRIVATE)
     fun get(c: Context): String? = prefs(c).getString("role", null)

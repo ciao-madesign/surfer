@@ -43,6 +43,7 @@
         </activity>
         <activity android:name=".EventActivity" android:exported="false" />
         <activity android:name=".OrganizerActivity" android:exported="false" />
+        <activity android:name=".TrainActivity" android:exported="false" />
 
         <!-- Scarica in anticipo il modulo dello scanner, così funziona subito anche senza rete. -->
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />

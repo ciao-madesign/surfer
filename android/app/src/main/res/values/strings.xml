@@ -2,15 +2,20 @@
     <string name="app_name">Surfer Live</string>
 
     <!-- Schermata iniziale: testi approvati dal responsabile (25/11/2026) -->
-    <string name="home_title">Come vuoi usare Surfer?</string>
-    <string name="role_viewer">Spettatore</string>
-    <string name="role_runner">Runner</string>
-    <string name="role_organizer">Organizzatore</string>
+    <string name="home_title">Come vuoi usare Orme?</string>
+    <string name="role_race">Gara</string>
+    <string name="role_train">Allenamento / Escursione</string>
+    <string name="role_follow">Segui</string>
     <string name="change_role">Torna alla scelta</string>
     <!-- Frasi sotto i pulsanti: approvate dal responsabile (versione «essenziale»); se vuote, la riga non compare -->
-    <string name="role_viewer_desc">Guarda la gara in diretta.</string>
-    <string name="role_runner_desc">Condividi la tua posizione.</string>
-    <string name="role_organizer_desc">Crea e gestisci una gara.</string>
+    <string name="role_race_desc">Partecipa a una gara e condividi la tua posizione.</string>
+    <string name="role_train_desc">Mostra il tuo percorso.</string>
+    <string name="role_follow_desc">Segui qualcuno live.</string>
+    <string name="train_workout">Allenamento</string>
+    <string name="train_workout_desc">Mostra percorso, ritmo, distanza.</string>
+    <string name="train_hike">Escursione</string>
+    <string name="train_hike_desc">Mostra sempre dove sei, quota e posizione anche dove non c\'è campo.</string>
+    <string name="train_warning">Questo non è un servizio di soccorso. In caso di emergenza chiama il 112.</string>
 
     <!-- Spettatore: testi approvati dal responsabile (25/11/2026) -->
     <string name="events_title">Eventi</string>
