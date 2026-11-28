@@ -16,7 +16,7 @@ In più, il progetto cambia nome, perché «Surfer» e «gare» non descrivono p
 4. **GPX facoltativo** in entrambe le modalità.
 5. **Dati cancellati** quando si preme «Termina condivisione» oppure **12 ore dopo l'avvio**, con possibilità di **prolungare**. Si usa lo stesso criterio delle gare (scadenza fissa dall'avvio): un solo meccanismo da gestire.
 6. **Idee incluse**: rientro previsto, ultima posizione nota, batteria, zona privata in allenamento, copia locale della traccia, avviso «non è un servizio di soccorso». **Esclusi**: messaggi rapidi e SOS.
-7. **Il nome nuovo si sceglie insieme** nei prossimi passi.
+7. **Nome scelto (28/11): «Orme»** (plurale, ispirato all'impronta di un animale selvatico per il logo). Resta provvisorio fino ai controlli su store e marchio. Domini liberi al 28/11: `orme.it`, `orme.live`, `orme.run`, `orme.eu`, `orme.fit`, `ormeapp.com`; presi: `orme.app`, `orme.io`, `orme.com`, `orme.me`. Singolare «Orma» scartato: quasi tutti i domini sono presi.
 8. Resta valido il resto: Vercel, tetto di 20 corridori per le gare, prima Android, iOS quando c'è budget, Kotlin nativo.
 
 ## Come funziona per l'utente
@@ -105,7 +105,7 @@ Le fasi 1–3 possono avanzare in parallelo alla bozza dell'app; la rinomina va 
 
 ## Domande aperte
 
-- Nome nuovo (si sceglie insieme).
+- Nome «Orme»: mancano i controlli su nomi negli store, marchio e profili social; poi scegliere il dominio principale.
 - Età minima e testo di consenso (professionista).
 - Password facoltativa sul link: serve già in prima versione?
 - Allenamento ed escursione solo a piedi all'inizio?
