@@ -47,6 +47,20 @@ In più, il progetto cambia nome, perché «Surfer» e «gare» non descrivono p
 | Archivio (Neon) e report | Sì | **No**: niente report, niente archivio |
 | Chi decide | Organizzatore e corridore | Solo la persona che esce |
 
+### Frequenza di registrazione (decisione 28/11)
+
+Per contenere i costi Redis le attività registrano **meno punti** delle gare. Valori di partenza, fissi (non modificabili dall'utente) e da tarare con prove vere:
+
+| | Gara (oggi) | Allenamento | Escursione |
+|---|---|---|---|
+| Un punto ogni | pochi secondi | circa 10 s | circa 60 s |
+| Invio al servizio ogni | pochi secondi | circa 30 s | circa 2 minuti (più punti insieme) |
+| Aggiornamento per chi segue | 5 s | 15 s | 30 s |
+
+Effetto stimato: un'uscita di 3 ore passa da 5.000–15.000 comandi a circa 1.000–2.500 in escursione e 2.500–5.000 in allenamento, cioè **da 3 a 10 volte meno**. Il costo di ogni invio è quasi lo stesso a prescindere da quanti punti contiene, quindi conta soprattutto inviare di rado. Le soglie le applica anche il servizio (rifiuta invii più frequenti del previsto per quella modalità), così un'app modificata non le aggira.
+
+Limite: in escursione la velocità e il filtro dei salti sono meno precisi (punti distanti un minuto), e «fuori percorso» reagisce con qualche decina di secondi di ritardo. Va bene per chi deve solo sapere dove ti trovi.
+
 La scadenza si fa con la scadenza automatica dei dati su Redis, non con l'attività notturna: oggi quest'ultima gira **una volta al giorno** (limite del piano gratuito di Vercel) e chiuderebbe un'attività con ore di ritardo.
 
 ## Piano a fasi
