@@ -38,6 +38,8 @@ Prevalgono sulle indicazioni precedenti di questo documento.
    - stessi colori, font e testi, presi dal design system;
    - ogni funzione nuova esce su entrambi i canali, oppure è segnata «solo web» o «solo app».
 
+9. **Modalità Allenamento ed Escursione** e **cambio di nome** (28/11): piano e impatti in `docs/proposta-attivita.md`. L'app avrà tre ingressi: Gara, Allenamento/Escursione, Segui.
+
 **Ordine di lavoro dell'app**: 1) corridore (GPS in background, coda offline: è il rischio tecnico); 2) spettatore con notifiche; 3) organizzatore (per ora resta sul sito).
 
 **Da chiarire**: lo spettatore segue più gare o più corridori insieme, o uno alla volta?
